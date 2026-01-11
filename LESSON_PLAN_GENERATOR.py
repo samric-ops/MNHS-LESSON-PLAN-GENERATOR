@@ -22,7 +22,7 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 
 # --- 2. API KEY EMBEDDED IN CODE ---
 # Replace this with your actual Google AI API key
-EMBEDDED_API_KEY = "AIza......"  # REPLACE WITH YOUR ACTUAL KEY
+EMBEDDED_API_KEY = "AIzaSyAKY2p-iwRDVHRaJI0m6SgbHdn-_UkoKks"  # REPLACE WITH YOUR ACTUAL KEY
 
 # --- 3. IMAGE HANDLING FOR GITHUB ---
 def get_image_base64(image_filename):
