@@ -20,7 +20,7 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 
 # --- 2. API KEY EMBEDDED IN CODE ---
 # Replace this with your actual Google AI API key
-EMBEDDED_API_KEY = "AIza......"  # REPLACE WITH YOUR ACTUAL KEY
+EMBEDDED_API_KEY = "AIzaSyDNEzMqxWgON8XvJQSe1YUIbyvz1N6nfg4"  # REPLACE WITH YOUR ACTUAL KEY
 
 # --- 3. SIMPLIFIED HEADER WITHOUT LOGOS ---
 def add_custom_header():
@@ -46,7 +46,7 @@ def add_custom_header():
     }
     .division-name {
         font-size: 20px;
-        font-weight = bold;
+        font-weight: bold;
         color: #FFD700; /* Gold color for contrast */
         margin: 8px 0;
     }
@@ -616,8 +616,8 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
     school_run.bold = True
     school_run.font.size = Pt(14)
     
-    # Title - IN ONE LINE
-    title = doc.add_paragraph("Daily Lesson Plan (DLP) Generator")
+    # Title - CHANGED TO: Daily Lesson Log (DLL) / Daily Lesson Plan (DLP)
+    title = doc.add_paragraph("Daily Lesson Log (DLL) / Daily Lesson Plan (DLP)")
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     title.runs[0].bold = True
     title.runs[0].font.size = Pt(14)
