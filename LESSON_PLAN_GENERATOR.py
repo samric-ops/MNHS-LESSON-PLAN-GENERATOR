@@ -20,7 +20,7 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 
 # --- 2. API KEY EMBEDDED IN CODE ---
 # Replace this with your actual Google AI API key
-EMBEDDED_API_KEY = "AIzaSyCmtVgQOPR7htY6_ELzCuYEc_DWcLVkvYo"  # REPLACE WITH YOUR ACTUAL KEY
+EMBEDDED_API_KEY = "AIza......"  # REPLACE WITH YOUR ACTUAL KEY
 
 # --- 3. SIMPLIFIED HEADER WITHOUT LOGOS ---
 def add_custom_header():
@@ -189,11 +189,13 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
             IMPORTANT: Use these exact objectives provided by the user. Do NOT modify them.
             
             CRITICAL INSTRUCTIONS:
-            1. You MUST generate exactly 5 distinct assessment questions.
-            2. Return ONLY valid JSON format.
-            3. Do NOT use bullet points (•) or any markdown in the JSON values.
-            4. All string values must be properly quoted.
-            5. Do NOT include any explanations outside the JSON.
+            1. You MUST generate exactly 5 distinct MULTIPLE CHOICE assessment questions with A, B, C, D choices.
+            2. Each assessment question MUST follow this format: "question|A. choice1|B. choice2|C. choice3|D. choice4"
+            3. The correct answer should be included in the choices.
+            4. Return ONLY valid JSON format.
+            5. Do NOT use bullet points (•) or any markdown in the JSON values.
+            6. All string values must be properly quoted.
+            7. Do NOT include any explanations outside the JSON.
 
             Return ONLY raw JSON. No markdown formatting.
             Structure:
@@ -224,11 +226,11 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
                     "generalization": "Reflection questions"
                 }},
                 "evaluation": {{
-                    "assess_q1": "First quiz question (clear, measurable question)",
-                    "assess_q2": "Second quiz question",
-                    "assess_q3": "Third quiz question",
-                    "assess_q4": "Fourth quiz question",
-                    "assess_q5": "Fifth quiz question",
+                    "assess_q1": "Question 1 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q2": "Question 2 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q3": "Question 3 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q4": "Question 4 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q5": "Question 5 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
                     "assignment": "Assignment task",
                     "remarks": "Remarks",
                     "reflection": "Reflection"
@@ -246,11 +248,13 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
             Learning Competency: {competency}
 
             CRITICAL INSTRUCTIONS:
-            1. You MUST generate exactly 5 distinct assessment questions.
-            2. Return ONLY valid JSON format.
-            3. Do NOT use bullet points (•) or any markdown in the JSON values.
-            4. All string values must be properly quoted.
-            5. Do NOT include any explanations outside the JSON.
+            1. You MUST generate exactly 5 distinct MULTIPLE CHOICE assessment questions with A, B, C, D choices.
+            2. Each assessment question MUST follow this format: "question|A. choice1|B. choice2|C. choice3|D. choice4"
+            3. The correct answer should be included in the choices.
+            4. Return ONLY valid JSON format.
+            5. Do NOT use bullet points (•) or any markdown in the JSON values.
+            6. All string values must be properly quoted.
+            7. Do NOT include any explanations outside the JSON.
 
             Return ONLY raw JSON. No markdown formatting.
             Structure:
@@ -281,11 +285,11 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
                     "generalization": "Reflection questions"
                 }},
                 "evaluation": {{
-                    "assess_q1": "First quiz question (clear, measurable question)",
-                    "assess_q2": "Second quiz question",
-                    "assess_q3": "Third quiz question",
-                    "assess_q4": "Fourth quiz question",
-                    "assess_q5": "Fifth quiz question",
+                    "assess_q1": "Question 1 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q2": "Question 2 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q3": "Question 3 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q4": "Question 4 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q5": "Question 5 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
                     "assignment": "Assignment task",
                     "remarks": "Remarks",
                     "reflection": "Reflection"
@@ -361,11 +365,11 @@ def create_fallback_data(subject, grade, quarter, content_std, perf_std, compete
             "generalization": "What did you learn? How can you apply this?"
         },
         "evaluation": {
-            "assess_q1": "What is the main concept of today's lesson?",
-            "assess_q2": "How would you apply this concept in real life?",
-            "assess_q3": "Explain the difference between key terms.",
-            "assess_q4": "Solve a simple problem using the concept.",
-            "assess_q5": "What are the limitations of this approach?",
+            "assess_q1": f"What is the main concept of {subject}?|A. Concept A|B. Concept B|C. Concept C|D. Concept D",
+            "assess_q2": f"How would you apply {subject} in real life?|A. Application A|B. Application B|C. Application C|D. Application D",
+            "assess_q3": f"Explain the difference between key terms in {subject}.|A. Difference A|B. Difference B|C. Difference C|D. Difference D",
+            "assess_q4": f"Solve a simple problem using {subject} concepts.|A. Solution A|B. Solution B|C. Solution C|D. Solution D",
+            "assess_q5": f"What are the limitations of {subject} approaches?|A. Limitation A|B. Limitation B|C. Limitation C|D. Limitation D",
             "assignment": "Research more about the topic",
             "remarks": "Lesson delivered successfully",
             "reflection": "Students showed good understanding"
@@ -466,8 +470,39 @@ def add_section_header(table, text):
     cell.paragraphs[0].runs[0].bold = True
     set_cell_background(cell, "BDD7EE")
 
+def parse_multiple_choice_question(q_text):
+    """Parse a multiple choice question in format: question|A. choice1|B. choice2|C. choice3|D. choice4"""
+    if not q_text:
+        return "No question provided", []
+    
+    # Split by pipe character
+    parts = q_text.split('|')
+    
+    if len(parts) < 5:
+        # If not in expected format, return as-is
+        return q_text, []
+    
+    question = parts[0].strip()
+    choices = []
+    
+    # Extract choices (should be 4 choices)
+    for i in range(1, min(5, len(parts))):
+        choice = parts[i].strip()
+        # Ensure choice starts with letter and period
+        if not re.match(r'^[A-D]\.', choice):
+            # Add prefix if missing
+            choice_prefix = ['A.', 'B.', 'C.', 'D.'][i-1]
+            choice = f"{choice_prefix} {choice}"
+        choices.append(choice)
+    
+    # Ensure we have exactly 4 choices
+    while len(choices) < 4:
+        choices.append(f"{['A.', 'B.', 'C.', 'D.'][len(choices)]} Choice placeholder")
+    
+    return question, choices
+
 def add_assessment_row(table, label, eval_sec):
-    """Special function to add assessment row with proper formatting."""
+    """Special function to add assessment row with multiple choice questions."""
     row_cells = table.add_row().cells
     
     # Label Column (Left)
@@ -486,36 +521,23 @@ def add_assessment_row(table, label, eval_sec):
     # Create new content
     # 1. Header
     p_header = content_cell.add_paragraph()
-    header_run = p_header.add_run("ASSESSMENT (5-item Quiz)")
+    header_run = p_header.add_run("ASSESSMENT (5-item Multiple Choice Quiz)")
     header_run.bold = True
     
     # 2. Directions
     p_dir = content_cell.add_paragraph()
-    p_dir.add_run("DIRECTIONS: Read each question carefully. Choose and write the correct answer.")
+    p_dir.add_run("DIRECTIONS: Read each question carefully. Choose the letter of the correct answer from options A, B, C, and D.")
     
     # 3. Empty line for spacing
     content_cell.add_paragraph()
     
-    # 4. Questions
+    # 4. Questions with multiple choice format
     for i in range(1, 6):
         question_key = f'assess_q{i}'
         raw_question = eval_sec.get(question_key, f'Question {i}')
         
-        # Clean question text
-        clean_q = str(raw_question).strip()
-        
-        # Remove any existing numbering patterns
-        patterns_to_remove = [
-            r'^\d+\.\s*',      # Matches "1. ", "2. ", etc.
-            r'^\d+\)\s*',      # Matches "1) ", "2) ", etc.
-            r'^Q\d+\.?\s*',    # Matches "Q1. ", "Q2 ", etc.
-            r'^Question\s+\d+[\.\)]?\s*'  # Matches "Question 1. ", etc.
-        ]
-        
-        for pattern in patterns_to_remove:
-            if re.match(pattern, clean_q, re.IGNORECASE):
-                clean_q = re.sub(pattern, '', clean_q)
-                break
+        # Parse multiple choice question
+        question_text, choices = parse_multiple_choice_question(raw_question)
         
         # Create question paragraph
         p_question = content_cell.add_paragraph()
@@ -525,10 +547,39 @@ def add_assessment_row(table, label, eval_sec):
         num_run.bold = True
         
         # Add question text with formatting
-        if clean_q:
-            format_text(p_question, clean_q)
+        if question_text:
+            format_text(p_question, question_text)
         
-        # Add spacing (except after last question)
+        # Add choices (A, B, C, D)
+        if choices:
+            for choice in choices:
+                p_choice = content_cell.add_paragraph()
+                p_choice.paragraph_format.left_indent = Inches(0.3)
+                
+                # Make the choice letter bold (A., B., etc.)
+                choice_match = re.match(r'^([A-D]\.)\s*(.*)', choice)
+                if choice_match:
+                    letter_part = choice_match.group(1)
+                    text_part = choice_match.group(2)
+                    
+                    letter_run = p_choice.add_run(f"{letter_part} ")
+                    letter_run.bold = True
+                    
+                    if text_part:
+                        format_text(p_choice, text_part)
+                else:
+                    # Fallback if format doesn't match
+                    format_text(p_choice, choice)
+        else:
+            # Fallback: create placeholder choices
+            for letter in ['A.', 'B.', 'C.', 'D.']:
+                p_choice = content_cell.add_paragraph()
+                p_choice.paragraph_format.left_indent = Inches(0.3)
+                letter_run = p_choice.add_run(f"{letter} ")
+                letter_run.bold = True
+                p_choice.add_run(f"Choice {letter[0]}")
+        
+        # Add spacing between questions (except after last question)
         if i < 5:
             content_cell.add_paragraph()
 
@@ -854,6 +905,19 @@ def main():
             with col_obj_pre3:
                 st.info("**Affective**")
                 st.write(ai_data.get('obj_3', 'N/A'))
+            
+            # Show assessment preview
+            with st.expander("📝 Preview Assessment Questions"):
+                for i in range(1, 6):
+                    question_key = f'assess_q{i}'
+                    raw_question = ai_data.get('evaluation', {}).get(question_key, '')
+                    if raw_question:
+                        question_text, choices = parse_multiple_choice_question(raw_question)
+                        st.markdown(f"**Question {i}:** {question_text}")
+                        if choices:
+                            for choice in choices:
+                                st.write(f"  {choice}")
+                        st.markdown("---")
             
             # Full preview
             with st.expander("📄 Preview All Generated Content"):
