@@ -150,7 +150,7 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
         genai.configure(api_key=EMBEDDED_API_KEY)
         
         # Try multiple model options
-        model_options = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-pro']
+        model_options = ['gemini-2.5-flash']
         model = None
         
         for model_name in model_options:
