@@ -20,7 +20,7 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 
 # --- 2. API KEY EMBEDDED IN CODE ---
 # Replace this with your actual Google AI API key
-EMBEDDED_API_KEY = "AIzaSyCmtVgQOPR7htY6_ELzCuYEc_DWcLVkvYo"  # REPLACE WITH YOUR ACTUAL KEY
+EMBEDDED_API_KEY = "AIza......"  # REPLACE WITH YOUR ACTUAL KEY
 
 # --- 3. SIMPLIFIED HEADER WITHOUT LOGOS ---
 def add_custom_header():
@@ -88,6 +88,61 @@ def add_custom_header():
     """, unsafe_allow_html=True)
 
 # --- 4. AI GENERATOR ---
+def clean_json_string(json_string):
+    """Clean the JSON string by removing invalid characters and fixing common issues"""
+    if not json_string:
+        return json_string
+    
+    # Remove markdown code blocks
+    json_string = re.sub(r'```json\s*', '', json_string)
+    json_string = re.sub(r'```\s*', '', json_string)
+    
+    # Remove bullet points and other invalid characters
+    json_string = json_string.replace('•', '-')  # Replace bullet points with hyphens
+    json_string = json_string.replace('\u2022', '-')  # Unicode bullet
+    json_string = json_string.replace('\u25cf', '-')  # Black circle bullet
+    
+    # Fix truncated strings (add closing quotes)
+    json_string = re.sub(r':\s*$', '": ""', json_string)  # Fix truncated values at end of line
+    
+    # Fix unclosed quotes in the middle of JSON
+    lines = json_string.split('\n')
+    cleaned_lines = []
+    
+    for i, line in enumerate(lines):
+        # Count quotes in the line
+        quote_count = line.count('"')
+        
+        # If odd number of quotes, add a closing quote at the end
+        if quote_count % 2 == 1 and ':' in line:
+            # Find the last colon position
+            last_colon_pos = line.rfind(':')
+            if last_colon_pos > 0:
+                # Check if there's an opening quote after the colon
+                after_colon = line[last_colon_pos + 1:].strip()
+                if after_colon.startswith('"') and not after_colon.endswith('"'):
+                    line = line + '"'
+                elif not after_colon.startswith('"') and after_colon:
+                    # If value doesn't start with quote but should be string
+                    value_start = last_colon_pos + 1
+                    while value_start < len(line) and line[value_start] in ' \t':
+                        value_start += 1
+                    if value_start < len(line):
+                        line = line[:value_start] + '"' + line[value_start:] + '"'
+        
+        cleaned_lines.append(line)
+    
+    json_string = '\n'.join(cleaned_lines)
+    
+    # Remove any control characters except newlines and tabs
+    json_string = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', json_string)
+    
+    # Fix common JSON issues
+    json_string = re.sub(r',\s*}', '}', json_string)  # Remove trailing commas before }
+    json_string = re.sub(r',\s*]', ']', json_string)  # Remove trailing commas before ]
+    
+    return json_string
+
 def generate_lesson_content(subject, grade, quarter, content_std, perf_std, competency, 
                            obj_cognitive=None, obj_psychomotor=None, obj_affective=None):
     try:
@@ -95,7 +150,7 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
         genai.configure(api_key=EMBEDDED_API_KEY)
         
         # Try multiple model options
-        model_options = ['gemini-2.5-flash']
+        model_options = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-pro']
         model = None
         
         for model_name in model_options:
@@ -133,14 +188,19 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
 
             IMPORTANT: Use these exact objectives provided by the user. Do NOT modify them.
             
-            CRITICAL INSTRUCTION: You MUST generate exactly 5 distinct assessment questions.
+            CRITICAL INSTRUCTIONS:
+            1. You MUST generate exactly 5 distinct assessment questions.
+            2. Return ONLY valid JSON format.
+            3. Do NOT use bullet points (•) or any markdown in the JSON values.
+            4. All string values must be properly quoted.
+            5. Do NOT include any explanations outside the JSON.
 
             Return ONLY raw JSON. No markdown formatting.
             Structure:
             {{
-                "obj_1": "{obj_cognitive}",
-                "obj_2": "{obj_psychomotor}",
-                "obj_3": "{obj_affective}",
+                "obj_1": "Cognitive objective",
+                "obj_2": "Psychomotor objective",
+                "obj_3": "Affective objective",
                 "topic": "The main topic (include math equations like 3x^2 if needed)",
                 "integration_within": "Topic within same subject",
                 "integration_across": "Topic across other subject",
@@ -185,7 +245,12 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
             Performance Standard: {perf_std}
             Learning Competency: {competency}
 
-            CRITICAL INSTRUCTION: You MUST generate exactly 5 distinct assessment questions.
+            CRITICAL INSTRUCTIONS:
+            1. You MUST generate exactly 5 distinct assessment questions.
+            2. Return ONLY valid JSON format.
+            3. Do NOT use bullet points (•) or any markdown in the JSON values.
+            4. All string values must be properly quoted.
+            5. Do NOT include any explanations outside the JSON.
 
             Return ONLY raw JSON. No markdown formatting.
             Structure:
@@ -230,24 +295,82 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
         
         response = model.generate_content(prompt)
         text = response.text
-        # Clean potential markdown
-        if "```json" in text:
-            text = text.replace("```json", "").replace("```", "")
-        elif "```" in text:
-            text = text.split("```")[1]
         
-        # Additional cleaning
-        text = text.strip()
+        # Clean the JSON response
+        cleaned_text = clean_json_string(text)
         
-        return json.loads(text)
+        # Log for debugging
+        st.sidebar.text_area("Raw AI Response", cleaned_text[:1000], height=200)
         
-    except json.JSONDecodeError as je:
-        st.error(f"JSON Parsing Error: {je}")
-        st.code(f"Raw response: {text[:500]}...", language="text")
-        return None
+        # Try to parse the JSON
+        try:
+            ai_data = json.loads(cleaned_text)
+            return ai_data
+        except json.JSONDecodeError as je:
+            st.error(f"JSON Parsing Error: {je}")
+            st.sidebar.error("Failed to parse JSON. Attempting manual fix...")
+            
+            # Attempt manual extraction
+            try:
+                # Try to extract JSON using regex
+                json_pattern = r'\{.*\}'
+                match = re.search(json_pattern, cleaned_text, re.DOTALL)
+                if match:
+                    json_str = match.group(0)
+                    # Remove any trailing commas
+                    json_str = re.sub(r',\s*}', '}', json_str)
+                    json_str = re.sub(r',\s*]', ']', json_str)
+                    ai_data = json.loads(json_str)
+                    return ai_data
+            except Exception as e2:
+                st.error(f"Manual JSON extraction also failed: {e2}")
+                # Create fallback data
+                return create_fallback_data(subject, grade, quarter, content_std, perf_std, competency)
+        
     except Exception as e:
         st.error(f"AI Generation Error: {str(e)}")
-        return None
+        # Create fallback data
+        return create_fallback_data(subject, grade, quarter, content_std, perf_std, competency)
+
+def create_fallback_data(subject, grade, quarter, content_std, perf_std, competency):
+    """Create fallback data in case AI generation fails"""
+    return {
+        "obj_1": f"Understand {subject} concepts",
+        "obj_2": f"Apply {subject} skills",
+        "obj_3": f"Appreciate the value of {subject}",
+        "topic": f"Introduction to {subject}",
+        "integration_within": f"Related {subject} topics",
+        "integration_across": "Mathematics, Science",
+        "resources": {
+            "guide": "Teacher's Guide",
+            "materials": "Learner's Materials",
+            "textbook": f"{subject} Textbook",
+            "portal": "DepEd LR Portal",
+            "other": "Online resources"
+        },
+        "procedure": {
+            "review": "Review previous lesson",
+            "purpose_situation": "Real-world application",
+            "visual_prompt": "Classroom Learning",
+            "vocabulary": "Term1: Definition1\nTerm2: Definition2\nTerm3: Definition3\nTerm4: Definition4\nTerm5: Definition5",
+            "activity_main": "Group activity to explore the topic",
+            "explicitation": f"Detailed explanation of {subject} with examples. Example 1: Basic application. Example 2: Advanced application.",
+            "group_1": "Research task",
+            "group_2": "Problem-solving task",
+            "group_3": "Presentation task",
+            "generalization": "What did you learn? How can you apply this?"
+        },
+        "evaluation": {
+            "assess_q1": "What is the main concept of today's lesson?",
+            "assess_q2": "How would you apply this concept in real life?",
+            "assess_q3": "Explain the difference between key terms.",
+            "assess_q4": "Solve a simple problem using the concept.",
+            "assess_q5": "What are the limitations of this approach?",
+            "assignment": "Research more about the topic",
+            "remarks": "Lesson delivered successfully",
+            "reflection": "Students showed good understanding"
+        }
+    }
 
 # --- 5. IMAGE FETCHER ---
 def fetch_ai_image(keywords):
@@ -761,6 +884,8 @@ def main():
             # Display success message
             st.balloons()
             st.success(f"✅ DLP generated for {subject} - {grade} - Quarter {quarter}")
+        else:
+            st.error("Failed to generate AI content. Please try again.")
 
 if __name__ == "__main__":
     main()
