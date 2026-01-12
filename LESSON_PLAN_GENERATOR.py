@@ -717,7 +717,7 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
     # --- REVISED: C. Developing Understanding Section ---
     # Create the content for this section with the new format
     developing_content = f"Activity: {proc.get('activity_main','')}\n\n"
-    developing_content += f"EXPLICITATION: {proc.get('explicitation','')} (should be detailed with enough explanations TOGETHER WITH TWO EXAMPLES WITH with enough explanations)\n\n"
+    developing_content += f"EXPLICITATION: {proc.get('explicitation','')}\n\n"
     developing_content += f"Group 1: {proc.get('group_1','')}\n"
     developing_content += f"Group 2: {proc.get('group_2','')}\n"
     developing_content += f"Group 3: {proc.get('group_3','')}"
