@@ -32,7 +32,7 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 # --- API KEY ---
 EMBEDDED_API_KEY = "AIza......"  # REPLACE WITH YOUR ACTUAL KEY
 
-# --- FIXED LOGO DISPLAY ---
+# --- LOGO HANDLING FUNCTIONS ---
 def get_image_base64(image_filename):
     """Get base64 encoded image"""
     try:
@@ -96,6 +96,20 @@ def add_custom_header():
         st.write("School logo found:", school_file)
         st.write("DepEd base64:", "Yes" if deped_base64 else "No")
         st.write("School base64:", "Yes" if school_base64 else "No")
+    
+    # Build HTML
+    deped_html = ""
+    school_html = ""
+    
+    if deped_base64:
+        deped_html = f"<div class='logo-box'><img src='data:image/png;base64,{deped_base64}'></div>"
+    else:
+        deped_html = "<div class='logo-placeholder'>DEPED<br>LOGO</div>"
+    
+    if school_base64:
+        school_html = f"<div class='logo-box'><img src='data:image/png;base64,{school_base64}'></div>"
+    else:
+        school_html = "<div class='logo-placeholder'>MANUAL NHS<br>LOGO</div>"
     
     st.markdown(f"""
     <style>
@@ -184,9 +198,7 @@ def add_custom_header():
     <div class="header-container">
         <!-- LEFT: DepEd Logo -->
         <div>
-            {"<div class='logo-box'><img src='data:image/png;base64," + deped_base64 + "'></div>" 
-             if deped_base64 else 
-             "<div class='logo-placeholder'>DEPED<br>LOGO</div>"}
+            {deped_html}
         </div>
         
         <!-- CENTER: Text -->
@@ -199,9 +211,7 @@ def add_custom_header():
         
         <!-- RIGHT: School Logo -->
         <div>
-            {"<div class='logo-box'><img src='data:image/png;base64," + school_base64 + "'></div>" 
-             if school_base64 else 
-             "<div class='logo-placeholder'>MANUAL NHS<br>LOGO</div>"}
+            {school_html}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -340,6 +350,19 @@ def create_docx(inputs, ai_data, teacher_name, principal_name):
         for key, value in resources.items():
             doc.add_paragraph(f"{key.title()}: {value}")
         
+        # Procedure
+        doc.add_paragraph("\nIV. PROCEDURE:").runs[0].bold = True
+        procedure = ai_data.get('procedure', {})
+        doc.add_paragraph(f"A. Review: {procedure.get('review', '')}")
+        doc.add_paragraph(f"B. Motivation: {procedure.get('purpose_situation', '')}")
+        doc.add_paragraph(f"C. Activity: {procedure.get('activity_main', '')}")
+        
+        # Evaluation
+        doc.add_paragraph("\nV. EVALUATION:").runs[0].bold = True
+        evaluation = ai_data.get('evaluation', {})
+        for i in range(1, 6):
+            doc.add_paragraph(f"{i}. {evaluation.get(f'assess_q{i}', '')}")
+        
         # Signatures
         doc.add_paragraph("\n\n")
         sig_table = doc.add_table(rows=1, cols=2)
@@ -361,7 +384,7 @@ def main():
     # Add header with BOTH logos
     add_custom_header()
     
-    # App title
+    # App title - ONE LINE
     st.markdown('<p class="app-title">Daily Lesson Plan (DLP) Generator</p>', unsafe_allow_html=True)
     
     # Sidebar
@@ -400,29 +423,33 @@ def main():
         subject = st.text_input("Subject Area", placeholder="e.g., Mathematics")
     
     with col2:
+        # Grade Level Dropdown - Kinder to Grade 12
         grade_options = [
-            "Kinder", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6",
-            "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"
+            "Kinder",
+            "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6",
+            "Grade 7", "Grade 8", "Grade 9", "Grade 10",
+            "Grade 11", "Grade 12"
         ]
-        grade = st.selectbox("Grade Level", grade_options, index=5)  # Default Grade 6
+        grade = st.selectbox("Grade Level", grade_options, index=6)  # Default to Grade 7
     
     with col3:
+        # Quarter Dropdown - Roman Numerals
         quarter_options = ["I", "II", "III", "IV"]
-        quarter = st.selectbox("Quarter", quarter_options, index=2)  # Default Quarter III
+        quarter = st.selectbox("Quarter", quarter_options, index=2)  # Default to Quarter III
     
     content_std = st.text_area("Content Standard", placeholder="The learner demonstrates understanding of...", height=100)
     perf_std = st.text_area("Performance Standard", placeholder="The learner is able to...", height=100)
     competency = st.text_area("Learning Competency", placeholder="Competency code and description...", height=100)
     
     # Optional objectives
-    with st.expander("📝 Optional: Enter Lesson Objectives"):
+    with st.expander("📝 Optional: Enter Lesson Objectives (Leave blank for AI to generate)"):
         col_o1, col_o2, col_o3 = st.columns(3)
         with col_o1:
-            obj_cognitive = st.text_area("Cognitive", placeholder="e.g., Identify parts of a cell", height=80)
+            obj_cognitive = st.text_area("Cognitive Objective", placeholder="What students should know", height=80)
         with col_o2:
-            obj_psychomotor = st.text_area("Psychomotor", placeholder="e.g., Draw and label", height=80)
+            obj_psychomotor = st.text_area("Psychomotor Objective", placeholder="What students should be able to do", height=80)
         with col_o3:
-            obj_affective = st.text_area("Affective", placeholder="e.g., Appreciate importance", height=80)
+            obj_affective = st.text_area("Affective Objective", placeholder="Values/attitudes to develop", height=80)
     
     # Generate button
     if st.button("🚀 Generate DLP", type="primary", use_container_width=True):
@@ -496,6 +523,7 @@ ASSESSMENT:
                        height=300)
         
         st.balloons()
+        st.success(f"✅ DLP generated for {subject} - {grade} - Quarter {quarter}")
 
 # Run app
 if __name__ == "__main__":
