@@ -20,7 +20,7 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 
 # --- 2. API KEY EMBEDDED IN CODE ---
 # Replace this with your actual Google AI API key
-EMBEDDED_API_KEY = "AIzaSyCmtVgQOPR7htY6_ELzCuYEc_DWcLVkvYo"  # REPLACE WITH YOUR ACTUAL KEY
+EMBEDDED_API_KEY = "AIzaSyDNEzMqxWgON8XvJQSe1YUIbyvz1N6nfg4"  # REPLACE WITH YOUR ACTUAL KEY
 
 # --- 3. SIMPLIFIED HEADER WITHOUT LOGOS ---
 def add_custom_header():
@@ -150,7 +150,7 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
         genai.configure(api_key=EMBEDDED_API_KEY)
         
         # Try multiple model options
-        model_options = ['gemini-2.5-flash']
+        model_options = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-pro']
         model = None
         
         for model_name in model_options:
@@ -596,90 +596,53 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
     section.left_margin = Inches(0.5)
     section.right_margin = Inches(0.5)
 
-    # --- FORMAL DOCUMENT HEADER ---
-    # Main title: Republic of the Philippines
-    title_para = doc.add_paragraph()
-    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    title_run = title_para.add_run("Republic of the Philippines")
-    title_run.font.size = Pt(24)
-    title_run.font.name = "Times New Roman"
-    title_run.bold = True
+    # --- HEADER FOR DOCUMENT ---
+    # Add school header to document
+    header_para = doc.add_paragraph()
+    header_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    # Subtitle: Department of Education
-    subtitle_para = doc.add_paragraph()
-    subtitle_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    subtitle_run = subtitle_para.add_run("Department of Education")
-    subtitle_run.font.size = Pt(18)
-    subtitle_run.font.name = "Arial"
-    subtitle_run.bold = True
+    # Department line
+    dept_run = header_para.add_run("DEPARTMENT OF EDUCATION REGION XI\n")
+    dept_run.bold = True
+    dept_run.font.size = Pt(12)
     
-    # Body text lines
-    body_lines = [
-        "Region XI",
-        "Schools Division Office of Davao del Sur",
-        "Brey, Northern Paligue, Padada, Davao del Sur"
-    ]
+    # Division line
+    div_run = header_para.add_run("DIVISION OF DAVAO DEL SUR\n")
+    div_run.bold = True
+    div_run.font.size = Pt(11)
     
-    for line in body_lines:
-        body_para = doc.add_paragraph()
-        body_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        body_run = body_para.add_run(line)
-        body_run.font.size = Pt(12)
-        body_run.font.name = "Calibri"
+    # School line
+    school_run = header_para.add_run("MANUAL NATIONAL HIGH SCHOOL\n\n")
+    school_run.bold = True
+    school_run.font.size = Pt(14)
     
-    # Add spacing
-    doc.add_paragraph()
-    
-    # Main document title
-    doc_title_para = doc.add_paragraph()
-    doc_title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc_title_run = doc_title_para.add_run("Daily Lesson Log (DLL) / Daily Lesson Plan (DLP)")
-    doc_title_run.font.size = Pt(14)
-    doc_title_run.font.name = "Times New Roman"
-    doc_title_run.bold = True
-    
-    # Add spacing
-    doc.add_paragraph()
+    # Title - IN ONE LINE
+    title = doc.add_paragraph("Daily Lesson Plan (DLP) Generator")
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.runs[0].bold = True
+    title.runs[0].font.size = Pt(14)
 
     # --- TOP INFO TABLE ---
-    table_top = doc.add_table(rows=2, cols=4)
+    table_top = doc.add_table(rows=1, cols=4)
     table_top.style = 'Table Grid'
     table_top.autofit = False
     
-    # Set column widths
-    table_top.columns[0].width = Inches(2.0)
-    table_top.columns[1].width = Inches(1.5)
-    table_top.columns[2].width = Inches(1.5)
-    table_top.columns[3].width = Inches(2.0)
+    table_top.columns[0].width = Inches(2.5)
+    table_top.columns[1].width = Inches(1.15)
+    table_top.columns[2].width = Inches(1.15)
+    table_top.columns[3].width = Inches(2.5)
 
-    # Fill first row with labels
-    row1 = table_top.rows[0].cells
-    row1[0].text = "Subject Area:"
-    row1[1].text = "Grade Level:"
-    row1[2].text = "Quarter:"
-    row1[3].text = "Date:"
-    
-    # Make labels bold
-    for cell in row1:
-        cell.paragraphs[0].runs[0].bold = True
-        cell.paragraphs[0].runs[0].font.name = "Calibri"
-        cell.paragraphs[0].runs[0].font.size = Pt(11)
-    
-    # Fill second row with values
-    row2 = table_top.rows[1].cells
-    format_text(row2[0].paragraphs[0], inputs['subject'])
-    format_text(row2[1].paragraphs[0], inputs['grade'])
-    format_text(row2[2].paragraphs[0], inputs['quarter'])
-    format_text(row2[3].paragraphs[0], date.today().strftime('%B %d, %Y'))
-    
-    # Set font for values
-    for cell in row2:
-        if cell.paragraphs[0].runs:
-            cell.paragraphs[0].runs[0].font.name = "Calibri"
-            cell.paragraphs[0].runs[0].font.size = Pt(11)
+    def fill_cell(idx, label, value):
+        cell = table_top.rows[0].cells[idx]
+        p = cell.paragraphs[0]
+        p.add_run(label).bold = True
+        p.add_run("\n")
+        format_text(p, value)
 
-    # Add spacing
-    doc.add_paragraph()
+    fill_cell(0, "Subject Area:", inputs['subject'])
+    fill_cell(1, "Grade Level:", inputs['grade'])
+    fill_cell(2, "Quarter:", inputs['quarter'])
+    fill_cell(3, "Date:", date.today().strftime('%B %d, %Y'))
 
     # --- MAIN CONTENT TABLE ---
     table_main = doc.add_table(rows=0, cols=2)
@@ -695,110 +658,42 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
     proc = ai_data.get('procedure', {})
     eval_sec = ai_data.get('evaluation', {})
 
-    # SECTION I - with Roman numeral
-    row_section1 = table_main.add_row().cells
-    row_section1[0].merge(row_section1[1])
-    section1_cell = row_section1[0]
-    section1_cell.text = "I. CURRICULUM CONTENT, STANDARD AND LESSON COMPETENCIES"
-    section1_cell.paragraphs[0].runs[0].bold = True
-    section1_cell.paragraphs[0].runs[0].font.name = "Calibri"
-    section1_cell.paragraphs[0].runs[0].font.size = Pt(11)
-    set_cell_background(section1_cell, "BDD7EE")
-    
-    # A. Content Standard
+    # SECTION I
+    add_section_header(table_main, "I. CURRICULUM CONTENT, STANDARD AND LESSON COMPETENCIES")
     add_row(table_main, "A. Content Standard", inputs['content_std'])
-    
-    # B. Performance Standard  
     add_row(table_main, "B. Performance Standard", inputs['perf_std'])
     
-    # C. Learning Competencies and Objectives
     row_comp = table_main.add_row().cells
-    row_comp[0].paragraphs[0].add_run("C. Learning Competencies and Objectives").bold = True
-    row_comp[0].paragraphs[0].runs[0].font.name = "Calibri"
-    row_comp[0].paragraphs[0].runs[0].font.size = Pt(11)
-    
-    # Build the content for Learning Competencies
+    row_comp[0].paragraphs[0].add_run("C. Learning Competencies").bold = True
     p_comp = row_comp[1].paragraphs[0]
-    p_comp.style.font.name = "Calibri"
-    p_comp.style.font.size = Pt(11)
-    
-    # Learning Competency header
-    comp_run = p_comp.add_run("Learning Competency\n")
-    comp_run.bold = True
-    comp_run.font.name = "Calibri"
-    
-    # Add the competency
-    p_comp.add_run(f"{inputs['competency']}\n\n")
-    
-    # Learning Objectives header
-    obj_run = p_comp.add_run("Learning Objectives:\n\n")
-    obj_run.bold = True
-    obj_run.font.name = "Calibri"
-    
-    # Add the objectives text
-    p_comp.add_run("At the end of the lesson, the learners will be able to:\n\n")
+    p_comp.add_run("Competency: ").bold = True
+    format_text(p_comp, inputs['competency'])
+    p_comp.add_run("\n\nObjectives:\n").bold = True
     p_comp.add_run(objs)
 
-    # D. Content
     add_row(table_main, "D. Content", ai_data.get('topic', ''))
-    
-    # E. Integration
-    integration_text = f"Within: {ai_data.get('integration_within','')}\nAcross: {ai_data.get('integration_across','')}"
-    add_row(table_main, "E. Integration", integration_text)
+    add_row(table_main, "E. Integration", f"Within: {ai_data.get('integration_within','')}\nAcross: {ai_data.get('integration_across','')}")
 
-    # SECTION II - with Roman numeral
-    row_section2 = table_main.add_row().cells
-    row_section2[0].merge(row_section2[1])
-    section2_cell = row_section2[0]
-    section2_cell.text = "II. LEARNING RESOURCES"
-    section2_cell.paragraphs[0].runs[0].bold = True
-    section2_cell.paragraphs[0].runs[0].font.name = "Calibri"
-    section2_cell.paragraphs[0].runs[0].font.size = Pt(11)
-    set_cell_background(section2_cell, "BDD7EE")
-    
-    # Learning Resources items
+    # SECTION II
+    add_section_header(table_main, "II. LEARNING RESOURCES")
     add_row(table_main, "Teacher Guide", r.get('guide', ''))
     add_row(table_main, "Learner's Materials(LMs)", r.get('materials', ''))
     add_row(table_main, "Textbooks", r.get('textbook', ''))
     add_row(table_main, "Learning Resource (LR) Portal", r.get('portal', ''))
     add_row(table_main, "Other Learning Resources", r.get('other', ''))
 
-    # SECTION III - with Roman numeral
-    row_section3 = table_main.add_row().cells
-    row_section3[0].merge(row_section3[1])
-    section3_cell = row_section3[0]
-    section3_cell.text = "III. TEACHING AND LEARNING PROCEDURE"
-    section3_cell.paragraphs[0].runs[0].bold = True
-    section3_cell.paragraphs[0].runs[0].font.name = "Calibri"
-    section3_cell.paragraphs[0].runs[0].font.size = Pt(11)
-    set_cell_background(section3_cell, "BDD7EE")
+    # SECTION III
+    add_section_header(table_main, "III. TEACHING AND LEARNING PROCEDURE")
+    add_row(table_main, "A. Activating Prior Knowledge", proc.get('review', ''))
     
-    # A. Activating Prior Knowledge - with subtitle in parentheses
-    review_content = f"{proc.get('review', '')}\n\n(Minds and Moods)"
-    add_row(table_main, "A. Activating Prior Knowledge", review_content)
+    # --- IMAGE ROW ---
+    row_img = table_main.add_row().cells
+    row_img[0].paragraphs[0].add_run("B. Establishing Lesson Purpose").bold = True
     
-    # B. Establishing Lesson Purpose - with subtitle and image
-    row_purpose = table_main.add_row().cells
-    row_purpose[0].paragraphs[0].add_run("B. Establishing Lesson Purpose").bold = True
-    row_purpose[0].paragraphs[0].runs[0].font.name = "Calibri"
-    row_purpose[0].paragraphs[0].runs[0].font.size = Pt(11)
+    cell_img = row_img[1]
+    format_text(cell_img.paragraphs[0], proc.get('purpose_situation', ''))
+    cell_img.paragraphs[0].add_run("\n")
     
-    purpose_cell = row_purpose[1]
-    
-    # Add subtitle
-    purpose_p1 = purpose_cell.add_paragraph()
-    purpose_p1.add_run("1. Lesson Purpose\n").bold = True
-    purpose_p1.runs[0].font.name = "Calibri"
-    
-    # Add purpose situation
-    if proc.get('purpose_situation', ''):
-        purpose_para = purpose_cell.add_paragraph(proc.get('purpose_situation', ''))
-        purpose_para.style.font.name = "Calibri"
-        purpose_para.style.font.size = Pt(11)
-    
-    purpose_cell.add_paragraph()  # Add spacing
-    
-    # Add image
     img_data = None
     if uploaded_image:
         img_data = uploaded_image
@@ -808,132 +703,77 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
     
     if img_data:
         try:
-            p_i = purpose_cell.add_paragraph()
+            p_i = cell_img.add_paragraph()
             p_i.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run_i = p_i.add_run()
             run_i.add_picture(img_data, width=Inches(3.5))
         except:
-            error_para = purpose_cell.add_paragraph("[Image Error]")
-            error_para.style.font.name = "Calibri"
+            cell_img.add_paragraph("[Image Error]")
     else:
-        noimg_para = purpose_cell.add_paragraph("[No Image Available]")
-        noimg_para.style.font.name = "Calibri"
-    
-    purpose_cell.add_paragraph()  # Add spacing
-    
-    # Add vocabulary
-    purpose_p2 = purpose_cell.add_paragraph()
-    purpose_p2.add_run("2. Unlocking Content Vocabulary\n").bold = True
-    purpose_p2.runs[0].font.name = "Calibri"
-    
-    if proc.get('vocabulary', ''):
-        vocab_para = purpose_cell.add_paragraph(proc.get('vocabulary', ''))
-        vocab_para.style.font.name = "Calibri"
-        vocab_para.style.font.size = Pt(11)
-    
-    # Add subtitle at the end
-    aims_para = purpose_cell.add_paragraph("\n(Aims)")
-    aims_para.style.font.name = "Calibri"
+        cell_img.add_paragraph("[No Image Available]")
+        
+    cell_img.add_paragraph(f"\nVocabulary:\n{proc.get('vocabulary','')}")
 
-    # C. Developing and Deepening Understanding - with subtitle
+    # --- REVISED: C. Developing Understanding Section ---
+    # Create the content for this section with the new format
     developing_content = f"Activity: {proc.get('activity_main','')}\n\n"
-    developing_content += f"Explicitation: {proc.get('explicitation','')}\n\n"
-    developing_content += f"Working by group:\n\n"
-    developing_content += f"Group 1: {proc.get('group_1','')}\n\n"
-    developing_content += f"Group 2: {proc.get('group_2','')}\n\n"
-    developing_content += f"Group 3: {proc.get('group_3','')}\n\n"
-    developing_content += "(Tasks and Thought)"
+    developing_content += f"EXPLICITATION: {proc.get('explicitation','')} (should be detailed with enough explanations TOGETHER WITH TWO EXAMPLES WITH with enough explanations)\n\n"
+    developing_content += f"Group 1: {proc.get('group_1','')}\n"
+    developing_content += f"Group 2: {proc.get('group_2','')}\n"
+    developing_content += f"Group 3: {proc.get('group_3','')}"
     
-    add_row(table_main, "C. Developing and Deepening Understanding", developing_content)
-    
-    # D. Making Generalization - with subtitle
-    generalization_content = f"{proc.get('generalization', '')}\n\n(Abstract)"
-    add_row(table_main, "D. Making Generalization", generalization_content)
+    add_row(table_main, "C. Developing Understanding", developing_content)
+    add_row(table_main, "D. Making Generalization", proc.get('generalization', ''))
 
-    # SECTION IV - with Roman numeral
-    row_section4 = table_main.add_row().cells
-    row_section4[0].merge(row_section4[1])
-    section4_cell = row_section4[0]
-    section4_cell.text = "IV. EVALUATING LEARNING"
-    section4_cell.paragraphs[0].runs[0].bold = True
-    section4_cell.paragraphs[0].runs[0].font.name = "Calibri"
-    section4_cell.paragraphs[0].runs[0].font.size = Pt(11)
-    set_cell_background(section4_cell, "BDD7EE")
-    
-    # A. Tests/Assessment - with multiple choice questions
-    add_assessment_row(table_main, "A. Tests/Assessment", eval_sec)
-    
-    # B. Assignment
+    # SECTION IV - REVISED ASSESSMENT SECTION
+    add_section_header(table_main, "IV. EVALUATING LEARNING")
+    add_assessment_row(table_main, "A. Assessment", eval_sec)
     add_row(table_main, "B. Assignment", eval_sec.get('assignment', ''))
-    
-    # C. Teacher's Remarks
-    add_row(table_main, "C. Teacher's Remarks", eval_sec.get('remarks', ''))
-    
-    # D. Reflection - with subtitle
-    reflection_content = f"{eval_sec.get('reflection', '')}\n\n(Gains)"
-    add_row(table_main, "D. Reflection", reflection_content)
+    add_row(table_main, "C. Remarks", eval_sec.get('remarks', ''))
+    add_row(table_main, "D. Reflection", eval_sec.get('reflection', ''))
 
-    # Add spacing before signatures
-    doc.add_paragraph()
     doc.add_paragraph()
 
     # --- SIGNATORIES TABLE ---
-    sig_table = doc.add_table(rows=1, cols=3)
+    sig_table = doc.add_table(rows=1, cols=2)
     sig_table.autofit = False
     
-    sig_table.columns[0].width = Inches(3.0)
-    sig_table.columns[1].width = Inches(3.0)
-    sig_table.columns[2].width = Inches(3.0)
+    sig_table.columns[0].width = Inches(4.0)
+    sig_table.columns[1].width = Inches(4.0)
     
     row = sig_table.rows[0]
     
-    # LEFT COLUMN: PREPARED BY
-    prepared_cell = row.cells[0]
-    prepared_p = prepared_cell.add_paragraph()
-    prepared_p.add_run("Prepared by:\n\n").bold = True
-    prepared_p.runs[0].font.name = "Calibri"
+    # LEFT COLUMN: TEACHER SIGNATURE
+    teacher_cell = row.cells[0]
     
-    # Add name
-    name_p = prepared_cell.add_paragraph()
-    name_run = name_p.add_run(teacher_name)
-    name_run.bold = True
-    name_run.font.name = "Calibri"
+    teacher_header_p = teacher_cell.add_paragraph()
+    teacher_header_run = teacher_header_p.add_run("Prepared by:")
+    teacher_header_run.bold = True
     
-    # Add teacher position
-    position_p = prepared_cell.add_paragraph("\nTeacher III")
-    position_p.runs[0].font.name = "Calibri"
+    teacher_cell.add_paragraph()
     
-    # MIDDLE COLUMN: CHECKED BY (1)
-    checked1_cell = row.cells[1]
-    checked1_p = checked1_cell.add_paragraph()
-    checked1_p.add_run("Checked by:\n\n").bold = True
-    checked1_p.runs[0].font.name = "Calibri"
+    teacher_name_p = teacher_cell.add_paragraph()
+    teacher_name_run = teacher_name_p.add_run(teacher_name)
+    teacher_name_run.bold = True
     
-    # Add underline for first checker
-    name1_p = checked1_cell.add_paragraph()
-    name1_run = name1_p.add_run("KRYZLYN A. AMAR")
-    name1_run.bold = True
-    name1_run.font.name = "Calibri"
+    teacher_position_p = teacher_cell.add_paragraph()
+    teacher_position_p.add_run("Teacher III")
     
-    # Add position
-    position1_p = checked1_cell.add_paragraph("\nMaster Teacher I")
-    position1_p.runs[0].font.name = "Calibri"
+    # RIGHT COLUMN: PRINCIPAL SIGNATURE
+    principal_cell = row.cells[1]
     
-    # RIGHT COLUMN: NOTED BY
-    noted_cell = row.cells[2]
-    noted_p = noted_cell.add_paragraph()
-    noted_p.add_run("Noted by:\n\n").bold = True
-    noted_p.runs[0].font.name = "Calibri"
+    principal_header_p = principal_cell.add_paragraph()
+    principal_header_run = principal_header_p.add_run("Noted by:")
+    principal_header_run.bold = True
     
-    # Add name for principal
-    name2_p = noted_cell.add_paragraph()
-    name2_run = name2_p.add_run(principal_name)
-    name2_run.bold = True
-    name2_run.font.name = "Calibri"
+    principal_cell.add_paragraph()
     
-    # Add position
-    position2_p = noted_cell.add_paragraph("\nSchool Head")
-    position2_p.runs[0].font.name = "Calibri"
+    principal_name_p = principal_cell.add_paragraph()
+    principal_name_run = principal_name_p.add_run(principal_name)
+    principal_name_run.bold = True
+    
+    principal_position_p = principal_cell.add_paragraph()
+    principal_position_p.add_run("Principal III")
 
     # Save to BytesIO
     buffer = io.BytesIO()
@@ -976,12 +816,12 @@ def main():
             "Grade 7", "Grade 8", "Grade 9", "Grade 10",
             "Grade 11", "Grade 12"
         ]
-        grade = st.selectbox("Grade Level", grade_options, index=9)  # Default to Grade 10
+        grade = st.selectbox("Grade Level", grade_options, index=6)  # Default to Grade 7
     
     with col3:
         # Quarter Dropdown - Roman Numerals
         quarter_options = ["I", "II", "III", "IV"]
-        quarter = st.selectbox("Quarter", quarter_options, index=0)  # Default to Quarter I
+        quarter = st.selectbox("Quarter", quarter_options, index=2)  # Default to Quarter III
     
     content_std = st.text_area("Content Standard", placeholder="The learner demonstrates understanding of...")
     perf_std = st.text_area("Performance Standard", placeholder="The learner is able to...")
