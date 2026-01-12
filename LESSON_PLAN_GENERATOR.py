@@ -20,7 +20,7 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 
 # --- 2. API KEY EMBEDDED IN CODE ---
 # Replace this with your actual Google AI API key
-EMBEDDED_API_KEY = "AIzaSyDNEzMqxWgON8XvJQSe1YUIbyvz1N6nfg4"  # REPLACE WITH YOUR ACTUAL KEY
+EMBEDDED_API_KEY = "AIza......"  # REPLACE WITH YOUR ACTUAL KEY
 
 # --- 3. SIMPLIFIED HEADER WITHOUT LOGOS ---
 def add_custom_header():
@@ -46,7 +46,7 @@ def add_custom_header():
     }
     .division-name {
         font-size: 20px;
-        font-weight: bold;
+        font-weight = bold;
         color: #FFD700; /* Gold color for contrast */
         margin: 8px 0;
     }
@@ -800,8 +800,7 @@ def main():
         st.info("Upload an image (optional) for the lesson")
         uploaded_image = st.file_uploader("Choose an image for lesson", type=['png', 'jpg', 'jpeg'], key="lesson")
         
-        st.markdown("---")
-        st.success("✅ API Key is already configured in the application")
+        # Removed the API Key message from here
     
     # Form Inputs
     col1, col2, col3 = st.columns(3)
