@@ -9,6 +9,7 @@ import random
 import re
 import base64
 import os
+from PIL import Image
 
 # --- NEW LIBRARY FOR WORD DOCS ---
 from docx import Document
@@ -24,22 +25,26 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 # Replace this with your actual Google AI API key
 EMBEDDED_API_KEY = "AIza......"  # REPLACE WITH YOUR ACTUAL KEY
 
-# --- 3. IMAGE HANDLING FIXED FOR YOUR FILES ---
+# --- 3. FIXED IMAGE HANDLING WITH DEBUGGING ---
 def get_image_base64(image_filename):
     """Get base64 encoded image or use placeholder"""
     try:
         if os.path.exists(image_filename):
             with open(image_filename, "rb") as img_file:
-                return base64.b64encode(img_file.read()).decode('utf-8')
+                # Check if image is valid
+                try:
+                    img = Image.open(img_file)
+                    img.verify()  # Verify it's a valid image
+                    img_file.seek(0)  # Reset file pointer
+                    return base64.b64encode(img_file.read()).decode('utf-8')
+                except:
+                    st.sidebar.warning(f"Invalid image file: {image_filename}")
+                    return None
         else:
-            # Try to find file with similar name
-            for file in os.listdir('.'):
-                if image_filename.lower() in file.lower():
-                    with open(file, "rb") as img_file:
-                        return base64.b64encode(img_file.read()).decode('utf-8')
+            return None
     except Exception as e:
         st.sidebar.warning(f"Error loading {image_filename}: {str(e)}")
-    return None
+        return None
 
 def add_custom_header():
     """Add custom header with maroon background and logos"""
@@ -136,75 +141,85 @@ def add_custom_header():
     </style>
     """, unsafe_allow_html=True)
     
-    # DEBUG: Show files in directory
-    debug_info = ""
-    all_files = os.listdir('.')
-    image_files = [f for f in all_files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
-    
-    # Display debug info in sidebar
-    with st.sidebar.expander("📁 Debug - Files Found", expanded=False):
-        st.write("All files in directory:", all_files)
-        st.write("Image files found:", image_files)
-    
-    # Get DEPED logo
-    deped_logo_base64 = None
-    deped_filenames = [
-        "deped logo.png", 
-        "deped_logo.png", 
-        "deped-logo.png",
-        "deped_logo_uploaded.png"
-    ]
-    
-    for filename in deped_filenames:
-        deped_logo_base64 = get_image_base64(filename)
-        if deped_logo_base64:
-            st.sidebar.success(f"✓ Found DepEd logo: {filename}")
-            break
-    
-    if not deped_logo_base64:
-        # Try to find any file with 'deped' in the name
+    # DEBUG: First, let's check what files are in the directory
+    with st.sidebar.expander("🔍 Debug File Search", expanded=True):
+        st.write("### Looking for logo files...")
+        
+        # List all files
+        all_files = os.listdir('.')
+        st.write(f"**Total files in directory:** {len(all_files)}")
+        
+        # Show all image files
+        image_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']
+        image_files = [f for f in all_files if any(f.lower().endswith(ext) for ext in image_extensions)]
+        
+        st.write("**Image files found:**")
+        for img_file in image_files:
+            st.write(f"- {img_file}")
+        
+        # Check for specific patterns
+        st.write("**Files containing 'manual' or 'nhs':**")
         for file in all_files:
-            if 'deped' in file.lower():
-                deped_logo_base64 = get_image_base64(file)
-                if deped_logo_base64:
-                    st.sidebar.success(f"✓ Found DepEd logo: {file}")
-                    break
+            if 'manual' in file.lower() or 'nhs' in file.lower():
+                st.write(f"- {file}")
     
-    # Get SCHOOL logo - LOOK FOR YOUR SPECIFIC FILENAME
+    # Try to get logos
+    deped_logo_base64 = None
     school_logo_base64 = None
     
-    # First try the exact long filename
-    long_filename = "393893242_355506113695594_2301660718121341125_n-removebg-preview.png"
-    school_logo_base64 = get_image_base64(long_filename)
+    # 1. FIRST: Check for uploaded files
+    uploaded_files = {
+        "deped": "deped_logo_uploaded.png",
+        "school": "school_logo_uploaded.jpg"
+    }
     
-    if school_logo_base64:
-        st.sidebar.success(f"✓ Found school logo: {long_filename}")
-    else:
-        # Try other possible school logo filenames
-        school_filenames = [
-            "school_logo.jpg", 
-            "school_logo.png",
-            "manual_nhs_logo.jpg",
-            "manual_nhs_logo.png",
-            "manual.jpg",
-            "manual.png",
-            "nhs_logo.jpg",
-            "logo.jpg"
+    # Check uploaded school logo first
+    if os.path.exists(uploaded_files["school"]):
+        school_logo_base64 = get_image_base64(uploaded_files["school"])
+        if school_logo_base64:
+            st.sidebar.success("✓ Using uploaded school logo")
+    
+    # Check uploaded DepEd logo
+    if os.path.exists(uploaded_files["deped"]):
+        deped_logo_base64 = get_image_base64(uploaded_files["deped"])
+        if deped_logo_base64:
+            st.sidebar.success("✓ Using uploaded DepEd logo")
+    
+    # 2. SECOND: If no uploaded files, try to find original files
+    if not school_logo_base64:
+        # Search for school logo with various patterns
+        school_patterns = [
+            "manual", "nhs", "school", "logo", 
+            "393893242", "removebg", "preview"
         ]
         
-        for filename in school_filenames:
-            school_logo_base64 = get_image_base64(filename)
-            if school_logo_base64:
-                st.sidebar.success(f"✓ Found school logo: {filename}")
-                break
-        
-        # Last resort: look for any image with 'manual' or 'nhs' in name
-        if not school_logo_base64:
-            for file in all_files:
-                if file.lower().endswith(('.png', '.jpg', '.jpeg')) and ('manual' in file.lower() or 'nhs' in file.lower()):
+        for file in all_files:
+            if any(pattern in file.lower() for pattern in school_patterns):
+                if file.lower().endswith(('.png', '.jpg', '.jpeg')):
                     school_logo_base64 = get_image_base64(file)
                     if school_logo_base64:
                         st.sidebar.success(f"✓ Found school logo: {file}")
+                        break
+        
+        # If still not found, try any image file
+        if not school_logo_base64 and image_files:
+            for img_file in image_files:
+                # Skip deped logo files
+                if 'deped' not in img_file.lower():
+                    school_logo_base64 = get_image_base64(img_file)
+                    if school_logo_base64:
+                        st.sidebar.success(f"✓ Using image as school logo: {img_file}")
+                        break
+    
+    if not deped_logo_base64:
+        # Search for DepEd logo
+        deped_patterns = ["deped", "logo"]
+        for file in all_files:
+            if any(pattern in file.lower() for pattern in deped_patterns):
+                if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    deped_logo_base64 = get_image_base64(file)
+                    if deped_logo_base64:
+                        st.sidebar.success(f"✓ Found DepEd logo: {file}")
                         break
     
     # Create HTML for header
@@ -225,22 +240,18 @@ def add_custom_header():
     </div>
     """
     
-    # Determine logo display
+    # Determine logo display with proper MIME types
     if deped_logo_base64:
+        # Try to determine MIME type
         deped_display = f'<div class="logo-box"><img src="data:image/png;base64,{deped_logo_base64}" alt="DepEd Logo"></div>'
     else:
         deped_display = '<div class="logo-placeholder">DEPED<br>REGION XI</div>'
-        st.sidebar.warning("⚠️ DepEd logo not found")
     
     if school_logo_base64:
+        # Try to determine MIME type for school logo
         school_display = f'<div class="logo-box"><img src="data:image/png;base64,{school_logo_base64}" alt="School Logo"></div>'
     else:
         school_display = '<div class="logo-placeholder">MANUAL<br>NATIONAL<br>HIGH SCHOOL</div>'
-        st.sidebar.warning("⚠️ School logo not found")
-        st.sidebar.info("Please make sure your school logo file is named one of:")
-        st.sidebar.write("- 393893242_355506113695594_2301660718121341125_n-removebg-preview.png")
-        st.sidebar.write("- school_logo.jpg/png")
-        st.sidebar.write("- manual_nhs_logo.jpg/png")
     
     # Display header
     st.markdown(header_html.format(
@@ -248,5 +259,6 @@ def add_custom_header():
         school_logo=school_display
     ), unsafe_allow_html=True)
 
-# [REST OF YOUR CODE REMAINS THE SAME - paste all other functions here]
-# Continue with the AI Generator, DOCX Creator, and Streamlit UI sections...
+# --- REST OF THE CODE CONTINUES THE SAME ---
+# [Keep all the other functions exactly as they were: AI Generator, Image Fetcher, DOCX Helpers, etc.]
+# Just replace the add_custom_header() function with the one above
