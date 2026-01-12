@@ -20,7 +20,7 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 
 # --- 2. API KEY EMBEDDED IN CODE ---
 # Replace this with your actual Google AI API key
-EMBEDDED_API_KEY = "AIzaSyCjBusA4G4RdMOYLQUN__3YD77DrcbqZjA"  # REPLACE WITH YOUR ACTUAL KEY
+EMBEDDED_API_KEY = "AIza......"  # REPLACE WITH YOUR ACTUAL KEY
 
 # --- 3. SIMPLIFIED HEADER WITHOUT LOGOS ---
 def add_custom_header():
@@ -87,7 +87,7 @@ def add_custom_header():
     </div>
     """, unsafe_allow_html=True)
 
-# --- 4. AI GENERATOR ---
+# --- 4. AI GENERATOR (UPDATED FOR STEP-BY-STEP EXPLICITATION) ---
 def generate_lesson_content(subject, grade, quarter, content_std, perf_std, competency, 
                            obj_cognitive=None, obj_psychomotor=None, obj_affective=None):
     try:
@@ -133,8 +133,10 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
 
             IMPORTANT: Use these exact objectives provided by the user. Do NOT modify them.
             
-            CRITICAL INSTRUCTION: You MUST generate exactly 5 distinct assessment questions.
-
+            CRITICAL INSTRUCTION: 
+            1. You MUST generate exactly 5 distinct assessment questions.
+            2. For the EXPLICITATION section, provide a STEP-BY-STEP DISCUSSION with TWO EXAMPLES.
+            
             Return ONLY raw JSON. No markdown formatting.
             Structure:
             {{
@@ -157,7 +159,7 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
                     "visual_prompt": "A simple 3-word visual description. Example: 'Red Apple Fruit'. NO sentences.",
                     "vocabulary": "5 terms with definitions",
                     "activity_main": "Main activity description",
-                    "explicitation": "Discussion details",
+                    "explicitation": "STEP-BY-STEP DISCUSSION:\n\nStep 1: [First step]\nStep 2: [Second step]\nStep 3: [Third step]\nStep 4: [Fourth step]\nStep 5: [Fifth step]\n\nEXAMPLE 1: [First example with step-by-step procedure]\n\nEXAMPLE 2: [Second example with step-by-step procedure]",
                     "group_1": "Group 1 task",
                     "group_2": "Group 2 task",
                     "group_3": "Group 3 task",
@@ -185,8 +187,10 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
             Performance Standard: {perf_std}
             Learning Competency: {competency}
 
-            CRITICAL INSTRUCTION: You MUST generate exactly 5 distinct assessment questions.
-
+            CRITICAL INSTRUCTION: 
+            1. You MUST generate exactly 5 distinct assessment questions.
+            2. For the EXPLICITATION section, provide a STEP-BY-STEP DISCUSSION with TWO EXAMPLES.
+            
             Return ONLY raw JSON. No markdown formatting.
             Structure:
             {{
@@ -209,7 +213,7 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
                     "visual_prompt": "A simple 3-word visual description. Example: 'Red Apple Fruit'. NO sentences.",
                     "vocabulary": "5 terms with definitions",
                     "activity_main": "Main activity description",
-                    "explicitation": "Discussion details",
+                    "explicitation": "STEP-BY-STEP DISCUSSION:\n\nStep 1: [First step]\nStep 2: [Second step]\nStep 3: [Third step]\nStep 4: [Fourth step]\nStep 5: [Fifth step]\n\nEXAMPLE 1: [First example with step-by-step procedure]\n\nEXAMPLE 2: [Second example with step-by-step procedure]",
                     "group_1": "Group 1 task",
                     "group_2": "Group 2 task",
                     "group_3": "Group 3 task",
@@ -343,6 +347,34 @@ def add_section_header(table, text):
     cell.paragraphs[0].runs[0].bold = True
     set_cell_background(cell, "BDD7EE")
 
+def add_explicitation_row(table, label, explicitation_content):
+    """Special function to add explicitation row with step-by-step formatting."""
+    row_cells = table.add_row().cells
+    
+    # Label Column (Left)
+    p_lbl = row_cells[0].paragraphs[0]
+    run_lbl = p_lbl.add_run(label)
+    run_lbl.bold = True
+    
+    # Content Column (Right) - Build from scratch
+    content_cell = row_cells[1]
+    
+    # Clear cell by removing all existing paragraphs
+    for paragraph in content_cell.paragraphs:
+        p = paragraph._element
+        p.getparent().remove(p)
+    
+    # Create new content
+    # 1. Header
+    p_header = content_cell.add_paragraph()
+    header_run = p_header.add_run("STEP-BY-STEP DISCUSSION WITH EXAMPLES")
+    header_run.bold = True
+    
+    # Add the explicitation content
+    if explicitation_content:
+        p_content = content_cell.add_paragraph()
+        format_text(p_content, str(explicitation_content))
+
 def add_assessment_row(table, label, eval_sec):
     """Special function to add assessment row with proper formatting."""
     row_cells = table.add_row().cells
@@ -409,7 +441,7 @@ def add_assessment_row(table, label, eval_sec):
         if i < 5:
             content_cell.add_paragraph()
 
-# --- 7. DOCX CREATOR ---
+# --- 7. DOCX CREATOR (UPDATED FOR STEP-BY-STEP EXPLICITATION) ---
 def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
     doc = Document()
     
@@ -539,11 +571,18 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
         cell_img.add_paragraph("[No Image Available]")
         
     cell_img.add_paragraph(f"\nVocabulary:\n{proc.get('vocabulary','')}")
-
-    # Rest of Section III
-    add_row(table_main, "C. Developing Understanding", 
-            f"Activity: {proc.get('activity_main','')}\n\nExplicitation: {proc.get('explicitation','')}\n\nGroup 1: {proc.get('group_1','')}\nGroup 2: {proc.get('group_2','')}\nGroup 3: {proc.get('group_3','')}")
-    add_row(table_main, "D. Making Generalization", proc.get('generalization', ''))
+    
+    # Activity Main
+    add_row(table_main, "C. Activity", proc.get('activity_main', ''))
+    
+    # --- UPDATED: EXPLICITATION WITH STEP-BY-STEP DISCUSSION ---
+    add_explicitation_row(table_main, "D. Explicitation (Step-by-Step Discussion)", proc.get('explicitation', ''))
+    
+    # Group Tasks
+    add_row(table_main, "E. Group Tasks", 
+            f"Group 1: {proc.get('group_1','')}\nGroup 2: {proc.get('group_2','')}\nGroup 3: {proc.get('group_3','')}")
+    
+    add_row(table_main, "F. Making Generalization", proc.get('generalization', ''))
 
     # SECTION IV - REVISED ASSESSMENT SECTION
     add_section_header(table_main, "IV. EVALUATING LEARNING")
@@ -725,6 +764,12 @@ def main():
             with col_obj_pre3:
                 st.info("**Affective**")
                 st.write(ai_data.get('obj_3', 'N/A'))
+            
+            # Show explicitation preview
+            st.subheader("📝 Step-by-Step Discussion & Examples")
+            with st.expander("View Explicitation Details"):
+                explicitation_text = ai_data.get('procedure', {}).get('explicitation', 'No explicitation provided')
+                st.text_area("Explicitation Content", explicitation_text, height=300)
             
             # Full preview
             with st.expander("📄 Preview All Generated Content"):
