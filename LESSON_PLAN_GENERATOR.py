@@ -50,9 +50,13 @@ def clean_json_string(json_string):
     cleaned = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', json_string)
     
     # Replace single quotes with double quotes for JSON compliance
-    # But be careful with apostrophes inside strings
-    # Simple approach: replace ' with " when it's at string boundaries
-    cleaned = re.sub(r"(?<=\s|^|:)'(.*?)'(?=\s|$|,|})", r'"\1"', cleaned)
+    # Fixed regex pattern - simpler and more reliable approach
+    # First, handle the specific case from your example
+    if "'" in cleaned:
+        # Pattern to match single-quoted strings that should be double-quoted
+        # This matches patterns like: 'text' that follow a colon or comma
+        pattern = r"(?<=[:{,\s])'(.*?)'(?=[,\s\]}])"
+        cleaned = re.sub(pattern, r'"\1"', cleaned)
     
     # Fix unclosed quotes at the end
     if cleaned.count('"') % 2 != 0:
@@ -62,15 +66,13 @@ def clean_json_string(json_string):
     # Ensure proper termination
     if not cleaned.strip().endswith('}'):
         cleaned = cleaned.rstrip()
-        if not cleaned.endswith('"'):
-            cleaned += '"'
+        # Remove trailing comma if present
+        if cleaned.endswith(','):
+            cleaned = cleaned[:-1]
+        # Add closing brace
         cleaned += '}'
     
-    # Fix the specific issue from the example
-    if "'" in cleaned and cleaned.endswith(",'"):
-        cleaned = cleaned[:-2] + '"'
-    
-    print(f"\nCleaned JSON string: {cleaned}")
+    print(f"\nCleaned JSON string: {cleaned[:100]}...")  # Show first 100 chars
     return cleaned
 
 def fix_json_structure(json_string):
@@ -86,12 +88,26 @@ def fix_json_structure(json_string):
     if not json_string.endswith('}'):
         json_string = json_string + '}'
     
-    # Fix key-value pairs
-    # Look for patterns like "key": 'value' and fix quotes
-    json_string = re.sub(r'":\s*\'(.*?)\'(?=\s*[,}])', r'": "\1"', json_string)
-    
-    # Fix missing commas between items
-    json_string = re.sub(r'"\s*"', '", "', json_string)
+    # Fix key-value pairs - simpler approach
+    # Convert single-quoted strings to double-quoted
+    # This handles patterns like: key: 'value'
+    import json
+    try:
+        # Try using json.loads with object_hook or custom parsing
+        # For simplicity, use eval with caution (only for trusted input)
+        # But better to use a safer approach:
+        
+        # Manual replacement for common patterns
+        replacements = [
+            (r":\s*'([^']*)'(?=\s*[,}])", r': "\1"'),
+            (r"'([^']*)'(?=\s*:)", r'"\1"'),
+        ]
+        
+        for pattern, replacement in replacements:
+            json_string = re.sub(pattern, replacement, json_string)
+            
+    except Exception as e:
+        print(f"Warning in fix_json_structure: {e}")
     
     return json_string
 
@@ -119,91 +135,85 @@ def validate_json_structure(parsed_json):
     
     return True
 
-def main():
-    """Main function to demonstrate JSON parsing and fixing."""
+def safe_json_parse(raw_response):
+    """
+    A safer, simpler function to parse JSON with error handling.
+    Use this as the main function to call.
+    """
+    if not raw_response or not isinstance(raw_response, str):
+        return None
     
-    # The problematic JSON from your example
+    # First try direct parsing
+    try:
+        return json.loads(raw_response)
+    except json.JSONDecodeError:
+        pass
+    
+    # Try to fix common issues
+    fixed = raw_response
+    
+    # Fix the specific issue from your example
+    if fixed.endswith(", '"):
+        fixed = fixed[:-3] + '"'
+    
+    # Ensure it ends with }
+    if not fixed.strip().endswith('}'):
+        fixed = fixed.strip()
+        if fixed.endswith(','):
+            fixed = fixed[:-1]
+        fixed += '}'
+    
+    # Replace problematic single quotes
+    fixed = fixed.replace(", '", ', "').replace("{'", '{"').replace("':", '":')
+    
+    # Try parsing again
+    try:
+        return json.loads(fixed)
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing failed after fixes: {e}")
+        # Last resort: try to extract JSON-like content
+        match = re.search(r'\{.*\}', fixed, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except:
+                pass
+        return None
+
+# Main function for your Streamlit app
+def main():
+    """Main function for Streamlit app integration."""
+    # Example from your error
     raw_response = '''{"obj_1": "• Define angles of elevation and angles of depression", '''
     
-    print("=" * 60)
-    print("JSON PARSING DEMONSTRATION")
-    print("=" * 60)
+    print("Parsing JSON response...")
     
-    print(f"\nOriginal raw response:\n{raw_response}")
-    
-    # Clean and parse the JSON
-    parsed_json = clean_and_parse_json(raw_response)
+    # Use the safer function
+    parsed_json = safe_json_parse(raw_response)
     
     if parsed_json:
-        # Validate the structure
-        is_valid = validate_json_structure(parsed_json)
-        
-        if is_valid:
-            print("\n" + "=" * 60)
-            print("FINAL PARSED JSON:")
-            print("=" * 60)
-            print(json.dumps(parsed_json, indent=2))
-            print("\n✓ Successfully parsed and validated JSON!")
-            
-            # Example of using the parsed data
-            print("\n" + "=" * 60)
-            print("EXTRACTED CONTENT:")
-            print("=" * 60)
-            for key, value in parsed_json.items():
-                print(f"{key}: {value}")
-        else:
-            print("\n✗ JSON structure validation failed")
+        print("Successfully parsed JSON!")
+        print(f"Content: {parsed_json}")
+        return parsed_json
     else:
-        print("\n✗ Failed to parse JSON")
-
-    print("\n" + "=" * 60)
-    print("ADDITIONAL EXAMPLES")
-    print("=" * 60)
-    
-    # Test with other problematic JSON examples
-    test_cases = [
-        # Original test case
-        '''{"obj_1": "• Define angles of elevation and angles of depression", ''',
+        print("Failed to parse JSON")
         
-        # JSON with control characters
-        '{"obj_1": "• Define angles\rof elevation", "obj_2": "Solve problems"}',
+        # Alternative: Create a valid JSON from the string
+        print("\nCreating valid JSON from string content...")
         
-        # JSON with single quotes
-        "{'obj_1': 'Define angles', 'obj_2': 'Solve problems'}",
-        
-        # Well-formed JSON
-        '{"obj_1": "Define angles of elevation", "obj_2": "Define angles of depression"}',
-    ]
+        # Extract the objective text
+        match = re.search(r'"([^"]+)"', raw_response)
+        if match:
+            objective_text = match.group(1)
+            valid_json = {
+                "obj_1": objective_text
+            }
+            print(f"Created valid JSON: {valid_json}")
+            return valid_json
     
-    for i, test_json in enumerate(test_cases, 1):
-        print(f"\nTest Case {i}:")
-        print(f"Input: {test_json[:50]}...")
-        result = clean_and_parse_json(test_json)
-        if result:
-            print(f"Parsed: {json.dumps(result, indent=2)}")
-
-def create_valid_json_example():
-    """
-    Create a properly formatted JSON example.
-    """
-    valid_json = {
-        "obj_1": "• Define angles of elevation and angles of depression",
-        "obj_2": "• Solve problems involving angles of elevation and depression",
-        "obj_3": "• Apply trigonometric ratios to real-world situations",
-        "obj_4": "• Distinguish between angle of elevation and angle of depression"
-    }
-    
-    print("\n" + "=" * 60)
-    print("PROPERLY FORMATTED JSON EXAMPLE:")
-    print("=" * 60)
-    print(json.dumps(valid_json, indent=2))
-    
-    # Save to file
-    with open('lesson_objectives.json', 'w', encoding='utf-8') as f:
-        json.dump(valid_json, f, indent=2, ensure_ascii=False)
-    
-    print("\n✓ Saved to 'lesson_objectives.json'")
+    return {"error": "Could not parse JSON"}
 
 if __name__ == "__main__":
-    main()
-    create_valid_json_example()
+    # For testing
+    result = main()
+    print(f"\nFinal result: {result}")
