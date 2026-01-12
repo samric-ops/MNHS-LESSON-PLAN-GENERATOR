@@ -20,7 +20,7 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 
 # --- 2. API KEY EMBEDDED IN CODE ---
 # Replace this with your actual Google AI API key
-EMBEDDED_API_KEY = "AIzaSyCjBusA4G4RdMOYLQUN__3YD77DrcbqZjA"  # REPLACE WITH YOUR ACTUAL KEY
+EMBEDDED_API_KEY = "AIzaSyCmtVgQOPR7htY6_ELzCuYEc_DWcLVkvYo"  # REPLACE WITH YOUR ACTUAL KEY
 
 # --- 3. SIMPLIFIED HEADER WITHOUT LOGOS ---
 def add_custom_header():
