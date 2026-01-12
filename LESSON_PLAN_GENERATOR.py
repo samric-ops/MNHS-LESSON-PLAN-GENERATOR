@@ -7,8 +7,6 @@ import requests
 import urllib.parse
 import random
 import re
-import base64
-import os
 
 # --- NEW LIBRARY FOR WORD DOCS ---
 from docx import Document
@@ -24,84 +22,36 @@ st.set_page_config(page_title="DLP Generator", layout="centered")
 # Replace this with your actual Google AI API key
 EMBEDDED_API_KEY = "AIza......"  # REPLACE WITH YOUR ACTUAL KEY
 
-# --- 3. IMAGE HANDLING FOR GITHUB ---
-def get_image_base64(image_filename):
-    """Get base64 encoded image or use placeholder"""
-    try:
-        if os.path.exists(image_filename):
-            with open(image_filename, "rb") as img_file:
-                return base64.b64encode(img_file.read()).decode('utf-8')
-    except:
-        pass
-    return None
-
+# --- 3. SIMPLIFIED HEADER WITHOUT LOGOS ---
 def add_custom_header():
-    """Add custom header with maroon background and logos"""
+    """Add custom header with maroon background (NO LOGOS)"""
     
     st.markdown("""
     <style>
     .header-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 20px;
+        text-align: center;
+        padding: 20px;
         margin-bottom: 25px;
         background-color: #800000; /* MAROON BACKGROUND */
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(128, 0, 0, 0.3);
         color: white;
     }
-    .logo-box {
-        width: 100px;
-        height: 100px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: white;
-        border: 2px solid white;
-        border-radius: 8px;
-        padding: 5px;
-    }
-    .logo-box img {
-        max-width: 90px;
-        max-height: 90px;
-        object-fit: contain;
-    }
-    .logo-placeholder {
-        width: 100px;
-        height: 100px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.9);
-        border: 2px solid white;
-        border-radius: 8px;
-        color: #800000;
-        font-size: 12px;
-        text-align: center;
-        padding: 5px;
-        font-weight: bold;
-    }
-    .center-content {
-        text-align: center;
-        flex-grow: 1;
-        padding: 0 25px;
-    }
     .dept-name {
-        font-size: 22px;
+        font-size: 24px;
         font-weight: bold;
         color: white;
         margin: 0;
         text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
     }
     .division-name {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: bold;
         color: #FFD700; /* Gold color for contrast */
         margin: 8px 0;
     }
     .school-name {
-        font-size: 24px;
+        font-size: 28px;
         font-weight: bold;
         color: white;
         margin: 8px 0;
@@ -109,7 +59,7 @@ def add_custom_header():
         letter-spacing: 1.5px;
     }
     .header-subtext {
-        font-size: 13px;
+        font-size: 15px;
         color: #FFD700; /* Gold color */
         margin-top: 8px;
         font-style: italic;
@@ -128,65 +78,14 @@ def add_custom_header():
         text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
     }
     </style>
-    """, unsafe_allow_html=True)
     
-    # Try to get logos (with different possible filenames)
-    deped_logo_base64 = None
-    school_logo_base64 = None
-    
-    # Try different possible filenames for DepEd logo
-    deped_filenames = ["deped logo.png", "deped_logo.png", "deped-logo.png"]
-    for filename in deped_filenames:
-        if os.path.exists(filename):
-            deped_logo_base64 = get_image_base64(filename)
-            break
-    
-    # Try different possible filenames for school logo
-    school_filenames = [
-        "school_logo.jpg", 
-        "school_logo.png",
-        "manual_nhs_logo.jpg",
-        "393893242_355506113695594_2301660718121341125_n.jpg"
-    ]
-    for filename in school_filenames:
-        if os.path.exists(filename):
-            school_logo_base64 = get_image_base64(filename)
-            break
-    
-    # Create HTML for header
-    header_html = """
     <div class="header-container">
-        <div>
-            {deped_logo}
-        </div>
-        <div class="center-content">
-            <p class="dept-name">DEPARTMENT OF EDUCATION REGION XI</p>
-            <p class="division-name">DIVISION OF DAVAO DEL SUR</p>
-            <p class="school-name">MANUAL NATIONAL HIGH SCHOOL</p>
-            <p class="header-subtext">Kiblawan North District</p>
-        </div>
-        <div>
-            {school_logo}
-        </div>
+        <p class="dept-name">DEPARTMENT OF EDUCATION REGION XI</p>
+        <p class="division-name">DIVISION OF DAVAO DEL SUR</p>
+        <p class="school-name">MANUAL NATIONAL HIGH SCHOOL</p>
+        <p class="header-subtext">Kiblawan North District</p>
     </div>
-    """
-    
-    # Determine logo display
-    if deped_logo_base64:
-        deped_display = f'<div class="logo-box"><img src="data:image/png;base64,{deped_logo_base64}" alt="DepEd Logo"></div>'
-    else:
-        deped_display = '<div class="logo-placeholder">DEPED<br>REGION XI</div>'
-    
-    if school_logo_base64:
-        school_display = f'<div class="logo-box"><img src="data:image/jpeg;base64,{school_logo_base64}" alt="School Logo"></div>'
-    else:
-        school_display = '<div class="logo-placeholder">MANUAL<br>NATIONAL<br>HIGH SCHOOL</div>'
-    
-    # Display header
-    st.markdown(header_html.format(
-        deped_logo=deped_display,
-        school_logo=school_display
-    ), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # --- 4. AI GENERATOR ---
 def generate_lesson_content(subject, grade, quarter, content_std, perf_std, competency, 
@@ -704,7 +603,7 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
 
 # --- 8. STREAMLIT UI ---
 def main():
-    # Add custom header with maroon background
+    # Add custom header with maroon background (NO LOGOS)
     add_custom_header()
     
     # App Title - IN ONE LINE with custom styling
@@ -716,23 +615,6 @@ def main():
         # Set default names to the required values
         teacher_name = st.text_input("Teacher Name", value="RICHARD P. SAMORANOS")
         principal_name = st.text_input("Principal Name", value="ROSALITA A. ESTROPIA")
-        
-        # Logo upload section
-        st.markdown("---")
-        st.subheader("🏫 School Logos")
-        st.info("Upload school logos if not in the same directory")
-        uploaded_deped_logo = st.file_uploader("Upload DepEd Logo", type=['png', 'jpg', 'jpeg'], key="deped")
-        uploaded_school_logo = st.file_uploader("Upload School Logo", type=['png', 'jpg', 'jpeg'], key="school")
-        
-        if uploaded_deped_logo:
-            # Save uploaded DepEd logo
-            with open("deped_logo_uploaded.png", "wb") as f:
-                f.write(uploaded_deped_logo.getbuffer())
-        
-        if uploaded_school_logo:
-            # Save uploaded school logo
-            with open("school_logo_uploaded.jpg", "wb") as f:
-                f.write(uploaded_school_logo.getbuffer())
         
         st.markdown("---")
         st.info("Upload an image (optional) for the lesson")
