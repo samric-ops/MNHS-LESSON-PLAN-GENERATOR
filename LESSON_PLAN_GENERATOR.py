@@ -144,7 +144,8 @@ def clean_json_string(json_string):
     return json_string
 
 def generate_lesson_content(subject, grade, quarter, content_std, perf_std, competency, 
-                           user_topic=None, obj_cognitive=None, obj_psychomotor=None, obj_affective=None):
+                           obj_cognitive=None, obj_psychomotor=None, obj_affective=None,
+                           lesson_topic=None):
     try:
         # Use the embedded API key
         genai.configure(api_key=EMBEDDED_API_KEY)
@@ -171,20 +172,34 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
         # Check if user provided objectives
         user_provided_objectives = obj_cognitive and obj_psychomotor and obj_affective
         
-        # Handle Topic Instruction
-        topic_instruction = ""
-        if user_topic and user_topic.strip() != "":
-            topic_instruction = f"IMPORTANT: The specific Lesson Topic is: '{user_topic}'. Ensure all content, activities, and evaluation focus on this topic."
+        # Check if user provided topic
+        user_provided_topic = lesson_topic and lesson_topic.strip()
         
-        base_prompt = f"""
-            You are an expert teacher from Manual National High School in the Division of Davao Del Sur, Region XI, Philippines.
-            Create a JSON object for a Daily Lesson Plan (DLP).
-            Subject: {subject}, Grade: {grade}, Quarter: {quarter}
-            Content Standard: {content_std}
-            Performance Standard: {perf_std}
-            Learning Competency: {competency}
-            {topic_instruction}
-
+        if user_provided_objectives or user_provided_topic:
+            # Build prompt with user-provided content
+            prompt_parts = [
+                f"""You are an expert teacher from Manual National High School in the Division of Davao Del Sur, Region XI, Philippines.
+                Create a JSON object for a Daily Lesson Plan (DLP).
+                Subject: {subject}, Grade: {grade}, Quarter: {quarter}
+                Content Standard: {content_std}
+                Performance Standard: {perf_std}
+                Learning Competency: {competency}"""]
+            
+            if user_provided_objectives:
+                prompt_parts.append(f"""
+                USER-PROVIDED OBJECTIVES:
+                - Cognitive: {obj_cognitive}
+                - Psychomotor: {obj_psychomotor}
+                - Affective: {obj_affective}
+                IMPORTANT: Use these exact objectives provided by the user. Do NOT modify them.""")
+            
+            if user_provided_topic:
+                prompt_parts.append(f"""
+                USER-PROVIDED LESSON TOPIC/CONTENT:
+                {lesson_topic}
+                IMPORTANT: Use this exact topic/content provided by the user. Do NOT modify it.""")
+            
+            prompt_parts.append(f"""
             CRITICAL INSTRUCTIONS:
             1. You MUST generate exactly 5 distinct MULTIPLE CHOICE assessment questions with A, B, C, D choices.
             2. Each assessment question MUST follow this format: "question|A. choice1|B. choice2|C. choice3|D. choice4"
@@ -193,38 +208,24 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
             5. Do NOT use bullet points (•) or any markdown in the JSON values.
             6. All string values must be properly quoted.
             7. Do NOT include any explanations outside the JSON.
-            """
 
-        objectives_part = ""
-        if user_provided_objectives:
-            objectives_part = f"""
-            USER-PROVIDED OBJECTIVES:
-            - Cognitive: {obj_cognitive}
-            - Psychomotor: {obj_psychomotor}
-            - Affective: {obj_affective}
-            IMPORTANT: Use these exact objectives provided by the user. Do NOT modify them.
-            """
-        else:
-            objectives_part = "Generate SMART objectives (Cognitive, Psychomotor, Affective) based on the competency."
-
-        structure_part = """
             Return ONLY raw JSON. No markdown formatting.
             Structure:
-            {
+            {{
                 "obj_1": "Cognitive objective",
                 "obj_2": "Psychomotor objective",
                 "obj_3": "Affective objective",
-                "topic": "The main topic (use the specific topic provided if any, otherwise derive from competency)",
+                "topic": "The main topic (include math equations like 3x^2 if needed)",
                 "integration_within": "Topic within same subject",
                 "integration_across": "Topic across other subject",
-                "resources": {
+                "resources": {{
                     "guide": "Teacher Guide reference",
                     "materials": "Learner Materials reference",
                     "textbook": "Textbook reference",
                     "portal": "Learning Resource Portal reference",
                     "other": "Other Learning Resources"
-                },
-                "procedure": {
+                }},
+                "procedure": {{
                     "review": "Review activity",
                     "purpose_situation": "Real-life situation motivation description",
                     "visual_prompt": "A simple 3-word visual description. Example: 'Red Apple Fruit'. NO sentences.",
@@ -235,8 +236,8 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
                     "group_2": "Group 2 task",
                     "group_3": "Group 3 task",
                     "generalization": "Reflection questions"
-                },
-                "evaluation": {
+                }},
+                "evaluation": {{
                     "assess_q1": "Question 1 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
                     "assess_q2": "Question 2 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
                     "assess_q3": "Question 3 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
@@ -245,13 +246,72 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
                     "assignment": "Assignment task",
                     "remarks": "Remarks",
                     "reflection": "Reflection"
-                }
-            }
+                }}
+            }}
+            """)
+            
+            prompt = "\n".join(prompt_parts)
+        else:
+            # Generate everything automatically
+            prompt = f"""
+            You are an expert teacher from Manual National High School in the Division of Davao Del Sur, Region XI, Philippines.
+            Create a JSON object for a Daily Lesson Plan (DLP).
+            Subject: {subject}, Grade: {grade}, Quarter: {quarter}
+            Content Standard: {content_std}
+            Performance Standard: {perf_std}
+            Learning Competency: {competency}
+
+            CRITICAL INSTRUCTIONS:
+            1. You MUST generate exactly 5 distinct MULTIPLE CHOICE assessment questions with A, B, C, D choices.
+            2. Each assessment question MUST follow this format: "question|A. choice1|B. choice2|C. choice3|D. choice4"
+            3. The correct answer should be included in the choices.
+            4. Return ONLY valid JSON format.
+            5. Do NOT use bullet points (•) or any markdown in the JSON values.
+            6. All string values must be properly quoted.
+            7. Do NOT include any explanations outside the JSON.
+
+            Return ONLY raw JSON. No markdown formatting.
+            Structure:
+            {{
+                "obj_1": "Cognitive objective",
+                "obj_2": "Psychomotor objective",
+                "obj_3": "Affective objective",
+                "topic": "The main topic (include math equations like 3x^2 if needed)",
+                "integration_within": "Topic within same subject",
+                "integration_across": "Topic across other subject",
+                "resources": {{
+                    "guide": "Teacher Guide reference",
+                    "materials": "Learner Materials reference",
+                    "textbook": "Textbook reference",
+                    "portal": "Learning Resource Portal reference",
+                    "other": "Other Learning Resources"
+                }},
+                "procedure": {{
+                    "review": "Review activity",
+                    "purpose_situation": "Real-life situation motivation description",
+                    "visual_prompt": "A simple 3-word visual description. Example: 'Red Apple Fruit'. NO sentences.",
+                    "vocabulary": "5 terms with definitions",
+                    "activity_main": "Main activity description",
+                    "explicitation": "Detailed explanation of the concept with clear explanations and TWO specific examples with detailed explanations",
+                    "group_1": "Group 1 task",
+                    "group_2": "Group 2 task",
+                    "group_3": "Group 3 task",
+                    "generalization": "Reflection questions"
+                }},
+                "evaluation": {{
+                    "assess_q1": "Question 1 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q2": "Question 2 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q3": "Question 3 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q4": "Question 4 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assess_q5": "Question 5 with choices in format: question|A. choice1|B. choice2|C. choice3|D. choice4",
+                    "assignment": "Assignment task",
+                    "remarks": "Remarks",
+                    "reflection": "Reflection"
+                }}
+            }}
             """
         
-        full_prompt = base_prompt + objectives_part + structure_part
-        
-        response = model.generate_content(full_prompt)
+        response = model.generate_content(prompt)
         text = response.text
         
         # Clean the JSON response
@@ -263,6 +323,11 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
         # Try to parse the JSON
         try:
             ai_data = json.loads(cleaned_text)
+            
+            # If user provided topic but AI didn't use it, override
+            if user_provided_topic and 'topic' in ai_data:
+                ai_data['topic'] = lesson_topic
+                
             return ai_data
         except json.JSONDecodeError as je:
             st.error(f"JSON Parsing Error: {je}")
@@ -279,27 +344,31 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
                     json_str = re.sub(r',\s*}', '}', json_str)
                     json_str = re.sub(r',\s*]', ']', json_str)
                     ai_data = json.loads(json_str)
+                    
+                    # If user provided topic but AI didn't use it, override
+                    if user_provided_topic and 'topic' in ai_data:
+                        ai_data['topic'] = lesson_topic
+                        
                     return ai_data
             except Exception as e2:
                 st.error(f"Manual JSON extraction also failed: {e2}")
                 # Create fallback data
-                return create_fallback_data(subject, grade, quarter, content_std, perf_std, competency, user_topic)
+                return create_fallback_data(subject, grade, quarter, content_std, perf_std, competency, lesson_topic)
         
     except Exception as e:
         st.error(f"AI Generation Error: {str(e)}")
         # Create fallback data
-        return create_fallback_data(subject, grade, quarter, content_std, perf_std, competency, user_topic)
+        return create_fallback_data(subject, grade, quarter, content_std, perf_std, competency, lesson_topic)
 
-def create_fallback_data(subject, grade, quarter, content_std, perf_std, competency, user_topic=None):
+def create_fallback_data(subject, grade, quarter, content_std, perf_std, competency, lesson_topic=None):
     """Create fallback data in case AI generation fails"""
-    
-    topic_display = user_topic if user_topic else f"Introduction to {subject}"
+    topic = lesson_topic if lesson_topic else f"Introduction to {subject}"
     
     return {
         "obj_1": f"Understand {subject} concepts",
         "obj_2": f"Apply {subject} skills",
         "obj_3": f"Appreciate the value of {subject}",
-        "topic": topic_display,
+        "topic": topic,
         "integration_within": f"Related {subject} topics",
         "integration_across": "Mathematics, Science",
         "resources": {
@@ -315,18 +384,18 @@ def create_fallback_data(subject, grade, quarter, content_std, perf_std, compete
             "visual_prompt": "Classroom Learning",
             "vocabulary": "Term1: Definition1\nTerm2: Definition2\nTerm3: Definition3\nTerm4: Definition4\nTerm5: Definition5",
             "activity_main": "Group activity to explore the topic",
-            "explicitation": f"Detailed explanation of {topic_display} with examples. Example 1: Basic application. Example 2: Advanced application.",
+            "explicitation": f"Detailed explanation of {subject} with examples. Example 1: Basic application. Example 2: Advanced application.",
             "group_1": "Research task",
             "group_2": "Problem-solving task",
             "group_3": "Presentation task",
             "generalization": "What did you learn? How can you apply this?"
         },
         "evaluation": {
-            "assess_q1": f"What is the main concept of {topic_display}?|A. Concept A|B. Concept B|C. Concept C|D. Concept D",
-            "assess_q2": f"How would you apply {topic_display} in real life?|A. Application A|B. Application B|C. Application C|D. Application D",
-            "assess_q3": f"Explain the difference between key terms.|A. Difference A|B. Difference B|C. Difference C|D. Difference D",
-            "assess_q4": f"Solve a simple problem using concepts.|A. Solution A|B. Solution B|C. Solution C|D. Solution D",
-            "assess_q5": f"What are the limitations?|A. Limitation A|B. Limitation B|C. Limitation C|D. Limitation D",
+            "assess_q1": f"What is the main concept of {subject}?|A. Concept A|B. Concept B|C. Concept C|D. Concept D",
+            "assess_q2": f"How would you apply {subject} in real life?|A. Application A|B. Application B|C. Application C|D. Application D",
+            "assess_q3": f"Explain the difference between key terms in {subject}.|A. Difference A|B. Difference B|C. Difference C|D. Difference D",
+            "assess_q4": f"Solve a simple problem using {subject} concepts.|A. Solution A|B. Solution B|C. Solution C|D. Solution D",
+            "assess_q5": f"What are the limitations of {subject} approaches?|A. Limitation A|B. Limitation B|C. Limitation C|D. Limitation D",
             "assignment": "Research more about the topic",
             "remarks": "Lesson delivered successfully",
             "reflection": "Students showed good understanding"
@@ -573,7 +642,7 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
     school_run.bold = True
     school_run.font.size = Pt(14)
     
-    # Title
+    # Title - CHANGED TO: Daily Lesson Log (DLL) / Daily Lesson Plan (DLP)
     title = doc.add_paragraph("Daily Lesson Log (DLL) / Daily Lesson Plan (DLP)")
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     title.runs[0].bold = True
@@ -672,6 +741,7 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
     cell_img.add_paragraph(f"\nVocabulary:\n{proc.get('vocabulary','')}")
 
     # --- REVISED: C. Developing Understanding Section ---
+    # Create the content for this section with the new format
     developing_content = f"Activity: {proc.get('activity_main','')}\n\n"
     developing_content += f"EXPLICITATION: {proc.get('explicitation','')}\n\n"
     developing_content += f"Group 1: {proc.get('group_1','')}\n"
@@ -739,86 +809,204 @@ def create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image):
 
 # --- 8. STREAMLIT UI ---
 def main():
+    # Add custom header with maroon background (NO LOGOS)
     add_custom_header()
     
-    st.markdown("<div class='app-title'>AI-Powered DLP Generator</div>", unsafe_allow_html=True)
-
-    with st.form("dlp_form"):
-        col1, col2 = st.columns(2)
+    # App Title - IN ONE LINE with custom styling
+    st.markdown('<p class="app-title">Daily Lesson Plan (DLP) Generator</p>', unsafe_allow_html=True)
+    
+    with st.sidebar:
+        st.header("📋 User Information")
         
-        with col1:
-            subject = st.text_input("Subject Area", value="Mathematics")
-            grade = st.selectbox("Grade Level", [f"Grade {i}" for i in range(7, 13)])
-            quarter = st.selectbox("Quarter", ["First Quarter", "Second Quarter", "Third Quarter", "Fourth Quarter"])
-            teacher_name = st.text_input("Teacher Name", value="JUAN D. CRUZ")
-
-        with col2:
-            content_std = st.text_area("Content Standard", height=100)
-            perf_std = st.text_area("Performance Standard", height=100)
-            principal_name = st.text_input("Principal Name", value="MARIA A. SANTOS")
-
-        competency = st.text_area("Learning Competency", height=80, placeholder="Enter the specific competency code and description...")
+        # Set default names to the required values
+        teacher_name = st.text_input("Teacher Name", value="RICHARD P. SAMORANOS")
+        principal_name = st.text_input("Principal Name", value="ROSALITA A. ESTROPIA")
         
-        # --- NEW FIELD: Lesson Content/TOPIC ---
         st.markdown("---")
-        st.subheader("Specific Lesson Details")
-        user_topic = st.text_input("Lesson Content/Topic (Optional)", placeholder="e.g., Quadratic Equations, Photosynthesis, The French Revolution")
-        st.caption("If you leave this blank, the AI will generate a topic based on the competency.")
+        st.info("Upload an image (optional) for the lesson")
+        uploaded_image = st.file_uploader("Choose an image for lesson", type=['png', 'jpg', 'jpeg'], key="lesson")
         
-        # Optional Objectives
-        with st.expander("Customize Objectives (Optional)"):
-            st.info("Leave these blank to let AI generate them based on the competency.")
-            obj_cog = st.text_input("Cognitive Objective")
-            obj_psy = st.text_input("Psychomotor Objective")
-            obj_aff = st.text_input("Affective Objective")
-            
-        uploaded_file = st.file_uploader("Upload Lesson Image (Optional)", type=['png', 'jpg', 'jpeg'])
+        # Removed the API Key message from here
+    
+    # Form Inputs
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        subject = st.text_input("Subject Area", placeholder="e.g., Mathematics")
+    
+    with col2:
+        # Grade Level Dropdown - Kinder to Grade 12
+        grade_options = [
+            "Kinder",
+            "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6",
+            "Grade 7", "Grade 8", "Grade 9", "Grade 10",
+            "Grade 11", "Grade 12"
+        ]
+        grade = st.selectbox("Grade Level", grade_options, index=6)  # Default to Grade 7
+    
+    with col3:
+        # Quarter Dropdown - Roman Numerals
+        quarter_options = ["I", "II", "III", "IV"]
+        quarter = st.selectbox("Quarter", quarter_options, index=2)  # Default to Quarter III
+    
+    content_std = st.text_area("Content Standard", placeholder="The learner demonstrates understanding of...")
+    perf_std = st.text_area("Performance Standard", placeholder="The learner is able to...")
+    competency = st.text_area("Learning Competency", placeholder="Competency code and description...")
+    
+    st.markdown("---")
+    
+    # --- NEW: LESSON CONTENT/TOPIC SECTION ---
+    st.subheader("📚 Lesson Content / Topic")
+    st.info("Enter the specific topic or content for this lesson. You can provide a detailed description or let AI generate it for you.")
+    
+    lesson_topic = st.text_area(
+        "Lesson Content / Topic",
+        placeholder="e.g., Introduction to Quadratic Equations: Solving ax^2 + bx + c = 0",
+        height=120,
+        help="The main content or topic that will be taught in this lesson. Include specific concepts, formulas, or key points."
+    )
+    
+    st.markdown("---")
+    
+    # --- OPTIONAL LESSON OBJECTIVES SECTION ---
+    st.subheader("📝 Optional: Lesson Objectives")
+    st.info("If you already have your lesson objectives, enter them below. Otherwise, leave blank and AI will generate them.")
+    
+    with st.expander("Enter Lesson Objectives (Optional)", expanded=False):
+        col_obj1, col_obj2, col_obj3 = st.columns(3)
         
-        submitted = st.form_submit_button("Generate Lesson Plan")
-
-    if submitted:
-        if not EMBEDDED_API_KEY or "AIza" in EMBEDDED_API_KEY and len(EMBEDDED_API_KEY) < 30:
-            st.warning("Please replace the EMBEDDED_API_KEY in the code with your actual Google AI API key.")
+        with col_obj1:
+            obj_cognitive = st.text_area(
+                "Cognitive Objective",
+                placeholder="e.g., Identify the parts of a cell",
+                height=100,
+                help="What students should know or understand"
+            )
+        
+        with col_obj2:
+            obj_psychomotor = st.text_area(
+                "Psychomotor Objective",
+                placeholder="e.g., Draw and label the parts of a cell",
+                height=100,
+                help="What students should be able to do"
+            )
+        
+        with col_obj3:
+            obj_affective = st.text_area(
+                "Affective Objective",
+                placeholder="e.g., Appreciate the complexity of living organisms",
+                height=100,
+                help="Values, attitudes, or emotions to develop"
+            )
+    
+    st.markdown("---")
+    
+    # Generate Button
+    if st.button("🚀 Generate DLP", type="primary", use_container_width=True):
+        if not all([subject, grade, quarter, content_std, perf_std, competency]):
+            st.error("Please fill all required fields")
             return
-
-        with st.spinner("🤖 AI is crafting your lesson plan..."):
-            # Prepare inputs
+        
+        # Check if user provided content
+        user_provided_topic = lesson_topic and lesson_topic.strip()
+        user_provided_objectives = obj_cognitive and obj_psychomotor and obj_affective
+        
+        if user_provided_topic:
+            st.info(f"✅ Using your provided lesson topic: {lesson_topic[:50]}...")
+        
+        if user_provided_objectives:
+            st.info("✅ Using your provided lesson objectives")
+            with st.spinner("🤖 Generating lesson content with YOUR inputs..."):
+                ai_data = generate_lesson_content(
+                    subject, grade, quarter, 
+                    content_std, perf_std, competency,
+                    obj_cognitive, obj_psychomotor, obj_affective,
+                    lesson_topic if user_provided_topic else None
+                )
+        else:
+            st.info("🔧 AI will generate lesson content for you")
+            with st.spinner("🤖 Generating complete lesson content with AI..."):
+                ai_data = generate_lesson_content(
+                    subject, grade, quarter, 
+                    content_std, perf_std, competency,
+                    lesson_topic=lesson_topic if user_provided_topic else None
+                )
+            
+        if ai_data:
+            st.success("✅ AI content generated successfully!")
+            
+            # Show topic preview
+            st.subheader("📚 Generated Lesson Content")
+            col_topic, col_integration = st.columns(2)
+            
+            with col_topic:
+                st.info("**Main Topic**")
+                st.write(ai_data.get('topic', 'N/A'))
+            
+            with col_integration:
+                st.info("**Integration**")
+                st.write(f"Within Subject: {ai_data.get('integration_within', 'N/A')}")
+                st.write(f"Across Subjects: {ai_data.get('integration_across', 'N/A')}")
+            
+            # Show objectives preview
+            st.subheader("📋 Generated Objectives")
+            col_obj_pre1, col_obj_pre2, col_obj_pre3 = st.columns(3)
+            
+            with col_obj_pre1:
+                st.info("**Cognitive**")
+                st.write(ai_data.get('obj_1', 'N/A'))
+            
+            with col_obj_pre2:
+                st.info("**Psychomotor**")
+                st.write(ai_data.get('obj_2', 'N/A'))
+            
+            with col_obj_pre3:
+                st.info("**Affective**")
+                st.write(ai_data.get('obj_3', 'N/A'))
+            
+            # Show assessment preview
+            with st.expander("📝 Preview Assessment Questions"):
+                for i in range(1, 6):
+                    question_key = f'assess_q{i}'
+                    raw_question = ai_data.get('evaluation', {}).get(question_key, '')
+                    if raw_question:
+                        question_text, choices = parse_multiple_choice_question(raw_question)
+                        st.markdown(f"**Question {i}:** {question_text}")
+                        if choices:
+                            for choice in choices:
+                                st.write(f"  {choice}")
+                        st.markdown("---")
+            
+            # Full preview
+            with st.expander("📄 Preview All Generated Content"):
+                st.json(ai_data)
+            
+            # Create DOCX
             inputs = {
                 'subject': subject,
                 'grade': grade,
                 'quarter': quarter,
                 'content_std': content_std,
                 'perf_std': perf_std,
-                'competency': competency,
-                'user_topic': user_topic
+                'competency': competency
             }
             
-            # Generate Content
-            ai_data = generate_lesson_content(
-                subject, grade, quarter, content_std, perf_std, competency,
-                user_topic=user_topic, # Pass the new topic field
-                obj_cognitive=obj_cog, 
-                obj_psychomotor=obj_psy, 
-                obj_affective=obj_aff
-            )
+            with st.spinner("📄 Creating DOCX file..."):
+                docx_buffer = create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_image)
             
-            # Show Success
-            st.success("Lesson Plan Generated!")
-            
-            # Preview (Optional)
-            with st.expander("Preview Generated Content"):
-                st.json(ai_data)
-            
-            # Generate Word Doc
-            doc_file = create_docx(inputs, ai_data, teacher_name, principal_name, uploaded_file)
-            
-            # Download Button
+            # Download button
             st.download_button(
-                label="📥 Download Word Document (.docx)",
-                data=doc_file,
-                file_name=f"DLP_{subject}_{grade}_{date.today()}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                label="📥 Download DLP (.docx)",
+                data=docx_buffer,
+                file_name=f"DLP_{subject}_{grade}_Q{quarter}_{date.today()}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True
             )
+            
+            # Display success message
+            st.balloons()
+            st.success(f"✅ DLP generated for {subject} - {grade} - Quarter {quarter}")
+        else:
+            st.error("Failed to generate AI content. Please try again.")
 
 if __name__ == "__main__":
     main()
