@@ -63,7 +63,7 @@ def add_custom_header():
         color: #FFD700; /* Gold color */
         margin-top: 8px;
         font-style: italic;
-        font-weight: bold;
+        font-weight = True
     }
     
     /* App title styling */
@@ -172,7 +172,7 @@ def generate_lesson_content(subject, grade, quarter, content_std, perf_std, comp
         # Check if user provided objectives
         user_provided_objectives = obj_cognitive and obj_psychomotor and obj_affective
         
-        # Check if user provided topic
+        # Check if user provided topic (optional)
         user_provided_topic = lesson_topic and lesson_topic.strip()
         
         if user_provided_objectives or user_provided_topic:
@@ -854,30 +854,29 @@ def main():
     
     st.markdown("---")
     
-    # --- NEW: LESSON CONTENT/TOPIC SECTION ---
-    st.subheader("📚 Lesson Content / Topic")
-    st.info("Enter the specific topic or content for this lesson. You can provide a detailed description or let AI generate it for you.")
-    
-    lesson_topic = st.text_area(
-        "Lesson Content / Topic",
-        placeholder="e.g., Introduction to Quadratic Equations: Solving ax^2 + bx + c = 0",
-        height=120,
-        help="The main content or topic that will be taught in this lesson. Include specific concepts, formulas, or key points."
-    )
+    # --- OPTIONAL: LESSON CONTENT/TOPIC SECTION ---
+    with st.expander("📚 Optional: Lesson Content / Topic", expanded=False):
+        st.info("Enter the specific topic or content for this lesson. Leave blank if you want AI to generate it.")
+        
+        lesson_topic = st.text_area(
+            "Lesson Content / Topic",
+            placeholder="e.g., Introduction to Quadratic Equations: Solving ax^2 + bx + c = 0\nOr leave blank for AI to generate",
+            height=120,
+            help="Optional: The main content or topic that will be taught in this lesson. Include specific concepts, formulas, or key points."
+        )
     
     st.markdown("---")
     
-    # --- OPTIONAL LESSON OBJECTIVES SECTION ---
-    st.subheader("📝 Optional: Lesson Objectives")
-    st.info("If you already have your lesson objectives, enter them below. Otherwise, leave blank and AI will generate them.")
-    
-    with st.expander("Enter Lesson Objectives (Optional)", expanded=False):
+    # --- OPTIONAL: LESSON OBJECTIVES SECTION ---
+    with st.expander("📝 Optional: Lesson Objectives", expanded=False):
+        st.info("If you already have your lesson objectives, enter them below. Otherwise, leave blank and AI will generate them.")
+        
         col_obj1, col_obj2, col_obj3 = st.columns(3)
         
         with col_obj1:
             obj_cognitive = st.text_area(
                 "Cognitive Objective",
-                placeholder="e.g., Identify the parts of a cell",
+                placeholder="e.g., Identify the parts of a cell\n(Leave blank for AI)",
                 height=100,
                 help="What students should know or understand"
             )
@@ -885,7 +884,7 @@ def main():
         with col_obj2:
             obj_psychomotor = st.text_area(
                 "Psychomotor Objective",
-                placeholder="e.g., Draw and label the parts of a cell",
+                placeholder="e.g., Draw and label the parts of a cell\n(Leave blank for AI)",
                 height=100,
                 help="What students should be able to do"
             )
@@ -893,7 +892,7 @@ def main():
         with col_obj3:
             obj_affective = st.text_area(
                 "Affective Objective",
-                placeholder="e.g., Appreciate the complexity of living organisms",
+                placeholder="e.g., Appreciate the complexity of living organisms\n(Leave blank for AI)",
                 height=100,
                 help="Values, attitudes, or emotions to develop"
             )
@@ -906,30 +905,32 @@ def main():
             st.error("Please fill all required fields")
             return
         
-        # Check if user provided content
+        # Check if user provided content (all optional)
         user_provided_topic = lesson_topic and lesson_topic.strip()
         user_provided_objectives = obj_cognitive and obj_psychomotor and obj_affective
         
+        # Show what user is providing
+        provided_items = []
         if user_provided_topic:
-            st.info(f"✅ Using your provided lesson topic: {lesson_topic[:50]}...")
-        
+            provided_items.append("topic")
         if user_provided_objectives:
-            st.info("✅ Using your provided lesson objectives")
-            with st.spinner("🤖 Generating lesson content with YOUR inputs..."):
-                ai_data = generate_lesson_content(
-                    subject, grade, quarter, 
-                    content_std, perf_std, competency,
-                    obj_cognitive, obj_psychomotor, obj_affective,
-                    lesson_topic if user_provided_topic else None
-                )
+            provided_items.append("objectives")
+        
+        if provided_items:
+            st.info(f"✅ Using your provided: {', '.join(provided_items)}")
+            st.info("🔧 AI will generate the remaining content")
         else:
-            st.info("🔧 AI will generate lesson content for you")
-            with st.spinner("🤖 Generating complete lesson content with AI..."):
-                ai_data = generate_lesson_content(
-                    subject, grade, quarter, 
-                    content_std, perf_std, competency,
-                    lesson_topic=lesson_topic if user_provided_topic else None
-                )
+            st.info("🔧 AI will generate all lesson content for you")
+        
+        with st.spinner("🤖 Generating lesson content..."):
+            ai_data = generate_lesson_content(
+                subject, grade, quarter, 
+                content_std, perf_std, competency,
+                obj_cognitive if obj_cognitive else None,
+                obj_psychomotor if obj_psychomotor else None,
+                obj_affective if obj_affective else None,
+                lesson_topic if user_provided_topic else None
+            )
             
         if ai_data:
             st.success("✅ AI content generated successfully!")
